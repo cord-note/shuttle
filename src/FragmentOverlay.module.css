@@ -1,0 +1,107 @@
+/* Absolutely positioned within .content (position:relative).
+   left is set dynamically via JS = right edge of ProseMirror + 12 px. */
+.overlay {
+  position: absolute;
+  top: 0;
+  width: 200px;
+  pointer-events: none;
+}
+
+/* One row per annotated/hovered block */
+.row {
+  position: absolute;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+  transform: translateY(2px);
+}
+
+/* ── Tag chip ───────────────────────────────────────────────────────────────── */
+
+.tagChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 5px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-panel);
+  white-space: nowrap;
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.tagChip:hover { background: var(--bg-active); }
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Backlink chip (inbound) ────────────────────────────────────────────────── */
+
+.backlinkChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+  white-space: nowrap;
+  cursor: default;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.backlinkChip:hover {
+  border-color: var(--accent);
+  color: var(--text-secondary);
+}
+
+/* ── Link chip ──────────────────────────────────────────────────────────────── */
+
+.linkChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 5px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-panel);
+  white-space: nowrap;
+  cursor: default;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.linkChip:hover {
+  background: var(--bg-active);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* ── Chip remove button ─────────────────────────────────────────────────────── */
+
+.chipRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+  padding: 0;
+}
+
+.chipRemove:hover { background: var(--danger-hover-bg); color: var(--danger); }
