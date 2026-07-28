@@ -1,0 +1,34 @@
+{
+  "name": "shuttle",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shuttle — a Tiptap-based editor with a ghost-markdown model, extracted from Cord for a standalone rework.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.27.2",
+    "@tiptap/extension-task-item": "^2.4.0",
+    "@tiptap/pm": "^2.27.2",
+    "@tiptap/react": "^2.4.0",
+    "@tiptap/suggestion": "^2.27.2",
+    "katex": "^0.16.45",
+    "lucide-react": "^1.8.0",
+    "marked": "^18.0.6",
+    "nanoid": "^3.3.11",
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/turndown": "^5.0.6",
+    "typescript": "^5.4.0"
+  }
+}

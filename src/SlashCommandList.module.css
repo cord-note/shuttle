@@ -1,0 +1,77 @@
+/* Deliberately low-profile: this popup appears directly under the caret while
+   typing, so it must obstruct as little of the surrounding text as possible.
+   Rows are single-line — descriptions moved to the hover tooltip. */
+.popup {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  min-width: 172px;
+  max-width: 230px;
+  max-height: 196px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 4px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  transition: background 0.1s;
+}
+
+.item:hover,
+.item.selected {
+  background: var(--bg-active);
+}
+
+.icon {
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.groupLabel {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 5px 7px 2px;
+}
+
+.groupLabel:first-child {
+  padding-top: 2px;
+}
+
+.empty {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
