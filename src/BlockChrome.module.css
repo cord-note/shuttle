@@ -1,0 +1,71 @@
+/* Block gutter controls.
+ *
+ * These live in the margin left of the text column and appear only for the block
+ * under the pointer — a page of always-visible handles reads as machinery rather
+ * than as writing.
+ *
+ * Their visibility is driven by JS, not by the block's `:hover`: the controls sit
+ * outside the block they act on, so a block-scoped hover would drop the pointer
+ * the moment it travelled toward them. */
+
+.gutter {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 1px;
+  padding-top: 1px;
+  animation: gutter-in 90ms ease both;
+}
+
+@keyframes gutter-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  /* The button is small; a generous hit area makes it reachable without care. */
+  transition: background 110ms ease, color 110ms ease;
+}
+
+.control:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.controlActive {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+/* The handle is a drag affordance first, a menu button second. */
+.handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+/* Where the dragged block will land. A line, not a highlighted gap, so it reads
+ * as an insertion point rather than as a selected region. */
+.dropLine {
+  position: absolute;
+  z-index: 21;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}

@@ -20,3 +20,9 @@ export {
 // export { WikiLink } from './WikiLink';
 // export { FragmentLinkNode } from './FragmentLinkNode';
 // export { UnlinkedMentionDecorations } from './UnlinkedMentionDecorations';
+
+// The v1.6 notepad work — Block, BlockNormalizer, BlockRef, the block chrome,
+// blockTarget, Keybindings, extensions and useNoteDoc — is present in src/ but
+// not exported. It still imports `@shared/*` and Cord's stores, so it does not
+// typecheck standalone. PACKAGING.md is the plan for fixing that; the ordering
+// there matters, and steps 1-3 are what make any of this exportable.

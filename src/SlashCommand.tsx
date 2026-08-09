@@ -1,23 +1,51 @@
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
 import { ReactRenderer } from '@tiptap/react';
-import type { Editor } from '@tiptap/core';
+import type { Editor, Range } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
 import {
   Pilcrow, Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare,
   Code2, Quote, Minus, Sigma, Pi,
-  Tag, Link2,
+  Tag, Link2, Blocks,
   BookOpen, Calendar, CalendarCheck, Layers, BookMarked,
 } from 'lucide-react';
+import type { NoteKind } from '@shared/types';
+import { blockIdAt, OPEN_REF_PICKER_EVENT } from './blockTarget';
 
 function fireFragmentAction(editor: Editor, type: 'tag' | 'noteLink' | 'fragmentLink') {
-  const blockId = editor.state.selection.$anchor.parent.attrs?.blockId as string | undefined;
+  const blockId = blockIdAt(editor.state);
   if (!blockId) return;
   window.dispatchEvent(new CustomEvent('corddb:fragment-action', { detail: { type, blockId } }));
 }
 
-const slashCommandPluginKey = new PluginKey('slashCommand');
+/**
+ * Insert block-level content, correctly for either document shape.
+ *
+ * In a notepad this replaces the caret's block with one block per node; in a
+ * plain note it inserts the nodes directly. Every slash item that produces
+ * block-level content goes through this, which is what keeps a single item
+ * definition working in both kinds.
+ */
+function insertBlocks(
+  editor: Editor,
+  range: Range,
+  mode: NoteKind,
+  nodes: Record<string, unknown>[],
+): void {
+  if (mode === 'notepad') {
+    const pos = range.from;
+    editor.chain().focus().deleteRange(range).command(({ commands, state }) =>
+      commands.replaceBlockWith(Math.min(pos, state.doc.content.size), nodes),
+    ).run();
+    return;
+  }
+  editor.chain().focus().deleteRange(range).insertContent(nodes).run();
+}
+
+// Exported so tests can assert the menu actually opens — the `＋` button reaches
+// it by inserting a `/` programmatically, which fires no text-input event.
+export const slashCommandPluginKey = new PluginKey('slashCommand');
 import SlashCommandList, {
   type SlashItem,
   type SlashCommandListRef,
@@ -94,8 +122,8 @@ const ITEMS: SlashItem[] = [
     title: 'Divider',
     description: 'Horizontal rule',
     icon: <Minus size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [{ type: 'horizontalRule' }]),
   },
   {
     title: 'Math (inline)',
@@ -113,20 +141,25 @@ const ITEMS: SlashItem[] = [
     title: 'Math Block',
     description: 'Display LaTeX formula',
     icon: <Pi size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .insertContent({ type: 'mathBlock', attrs: { latex: '' } })
-        .run(),
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [{ type: 'mathBlock', attrs: { latex: '' } }]),
+  },
+  {
+    title: 'Block reference',
+    description: 'Embed a block from another note',
+    icon: <Blocks size={14} strokeWidth={1.75} />,
+    only: 'notepad',
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      window.dispatchEvent(new CustomEvent(OPEN_REF_PICKER_EVENT));
+    },
   },
   {
     title: 'Tag block',
     description: 'Add a tag to this block',
     icon: <Tag size={14} strokeWidth={1.75} />,
     command: ({ editor, range }) => {
-      const blockId = editor.state.selection.$anchor.parent.attrs?.blockId;
+      const blockId = blockIdAt(editor.state);
       editor.chain().focus().deleteRange(range).run();
       if (blockId) fireFragmentAction(editor, 'tag');
     },
@@ -136,7 +169,7 @@ const ITEMS: SlashItem[] = [
     description: 'Link this block to a note',
     icon: <Link2 size={14} strokeWidth={1.75} />,
     command: ({ editor, range }) => {
-      const blockId = editor.state.selection.$anchor.parent.attrs?.blockId;
+      const blockId = blockIdAt(editor.state);
       editor.chain().focus().deleteRange(range).run();
       if (blockId) fireFragmentAction(editor, 'noteLink');
     },
@@ -146,7 +179,7 @@ const ITEMS: SlashItem[] = [
     description: 'Link this block to a fragment in a note',
     icon: <Link2 size={14} strokeWidth={1.75} />,
     command: ({ editor, range }) => {
-      const blockId = editor.state.selection.$anchor.parent.attrs?.blockId;
+      const blockId = blockIdAt(editor.state);
       editor.chain().focus().deleteRange(range).run();
       if (blockId) fireFragmentAction(editor, 'fragmentLink');
     },
@@ -181,8 +214,8 @@ const TEMPLATES: SlashItem[] = [
     description: 'Title · Objectives · Notes · Summary',
     group: 'Templates',
     icon: <BookOpen size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).insertContent([
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [
         h(1, 'Lesson Title'),
         h(2, 'Objectives'),
         bullets(2),
@@ -190,15 +223,15 @@ const TEMPLATES: SlashItem[] = [
         p(),
         h(2, 'Summary'),
         p(),
-      ]).run(),
+      ]),
   },
   {
     title: 'Meeting',
     description: 'Date · Agenda checklist · Notes · Action items',
     group: 'Templates',
     icon: <Calendar size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).insertContent([
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [
         h(1, 'Meeting'),
         meta('Date: '),
         meta('Time: '),
@@ -209,15 +242,15 @@ const TEMPLATES: SlashItem[] = [
         p(),
         h(2, 'Action Items'),
         tasks(2),
-      ]).run(),
+      ]),
   },
   {
     title: 'Daily Note',
     description: "Today's date · Tasks · Notes · Reflection",
     group: 'Templates',
     icon: <CalendarCheck size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).insertContent([
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [
         h(1, todayLabel()),
         h(2, 'Tasks'),
         tasks(3),
@@ -225,15 +258,15 @@ const TEMPLATES: SlashItem[] = [
         p(),
         h(2, 'Reflection'),
         p(),
-      ]).run(),
+      ]),
   },
   {
     title: 'Project',
     description: 'Overview · Goals · Task list · Notes',
     group: 'Templates',
     icon: <Layers size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).insertContent([
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [
         h(1, 'Project Name'),
         h(2, 'Overview'),
         p(),
@@ -243,15 +276,15 @@ const TEMPLATES: SlashItem[] = [
         tasks(3),
         h(2, 'Notes'),
         p(),
-      ]).run(),
+      ]),
   },
   {
     title: 'Research Note',
     description: 'Source · Key findings · Notes · References',
     group: 'Templates',
     icon: <BookMarked size={14} strokeWidth={1.75} />,
-    command: ({ editor, range }) =>
-      editor.chain().focus().deleteRange(range).insertContent([
+    command: ({ editor, range, mode }) =>
+      insertBlocks(editor, range, mode, [
         h(1, 'Research: Topic'),
         meta('Source: '),
         h(2, 'Key Findings'),
@@ -260,18 +293,19 @@ const TEMPLATES: SlashItem[] = [
         p(),
         h(2, 'References'),
         bullets(1),
-      ]).run(),
+      ]),
   },
 ];
 
 const ALL_ITEMS: SlashItem[] = [...ITEMS, ...TEMPLATES];
 
-function filterItems(query: string): SlashItem[] {
+function filterItems(query: string, mode: NoteKind): SlashItem[] {
   const q = query.toLowerCase();
   return ALL_ITEMS.filter(
     (item) =>
-      item.title.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q),
+      (item.only === undefined || item.only === mode) &&
+      (item.title.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q)),
   );
 }
 
@@ -338,10 +372,21 @@ function makeRenderFn() {
 
 // ── Extension ───────────────────────────────────────────────────────────────
 
-export const SlashCommand = Extension.create({
+export interface SlashCommandOptions {
+  /** Document shape the items must produce content for. */
+  mode: NoteKind;
+}
+
+export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slashCommand',
 
+  addOptions() {
+    return { mode: 'note' };
+  },
+
   addProseMirrorPlugins() {
+    const { mode } = this.options;
+
     return [
       Suggestion({
         pluginKey: slashCommandPluginKey,
@@ -349,9 +394,9 @@ export const SlashCommand = Extension.create({
         char: '/',
         allowSpaces: false,
         startOfLine: false,
-        items: ({ query }) => filterItems(query),
+        items: ({ query }) => filterItems(query, mode),
         command: ({ editor, range, props }) => {
-          (props as SlashItem).command({ editor, range });
+          (props as SlashItem).command({ editor, range, mode });
         },
         render: makeRenderFn(),
       }),

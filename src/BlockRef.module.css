@@ -1,0 +1,74 @@
+/* Transcluded block.
+ *
+ * Reads as borrowed content, not as content of this page: it is inset behind an
+ * accent edge and its source is named above it. Without that attribution a
+ * reference is indistinguishable from text the reader wrote here, which is the
+ * one thing a transclusion must never be. */
+
+.ref {
+  margin: 10px 0;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-hover);
+  transition: border-color 120ms ease;
+}
+
+.ref:hover {
+  border-left-color: var(--accent);
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 2px 0 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.source:hover {
+  color: var(--accent);
+}
+
+.sourceTitle {
+  overflow: hidden;
+  max-width: 260px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The referenced content itself. Not editable, so it drops the caret affordances
+ * the surrounding blocks have, and sits slightly muted to reinforce that. */
+.body {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.body > :first-child { margin-top: 0; }
+.body > :last-child  { margin-bottom: 0; }
+
+.loading {
+  padding: 2px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.unresolved {
+  border-left-color: var(--danger);
+  background: var(--danger-hover-bg);
+}
+
+.unresolvedRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}

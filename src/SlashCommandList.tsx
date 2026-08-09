@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Editor, Range } from '@tiptap/core';
+import type { NoteKind } from '@shared/types';
 import styles from './SlashCommandList.module.css';
 
 export interface SlashItem {
@@ -14,7 +15,9 @@ export interface SlashItem {
   description: string;
   icon: ReactNode;
   group?: string;
-  command: (args: { editor: Editor; range: Range }) => void;
+  /** Only offered in this note kind. Omitted means both. */
+  only?: NoteKind;
+  command: (args: { editor: Editor; range: Range; mode: NoteKind }) => void;
 }
 
 interface Props {

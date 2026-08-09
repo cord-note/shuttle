@@ -2,3 +2,27 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+
+# Tooling caches
+.impeccable/
+
+# AI assistant and local-workspace files. None of this is part of the package,
+# and it is workspace-specific — instructions, session state and editor config
+# that would only mislead anyone reading the published repository.
+.claude/
+.cursor/
+.cursorrules
+.aider*
+.windsurfrules
+.continue/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.vscode/
+.idea/
+*.code-workspace
+
+# Scratch space
+scratchpad/
+tmp/
+*.local.json
