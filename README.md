@@ -1,8 +1,20 @@
 # Shuttle
 
-The editor layer for [Cord](https://github.com/alexander-288/cord): [Tiptap](https://tiptap.dev) OSS (MIT) plus a **ghost-markdown** model — markdown syntax disappears as you type; storage is Tiptap JSON, and markdown is input UX only.
+The editor layer for [Cord](https://github.com/cord-note/cord): [Tiptap](https://tiptap.dev) OSS (MIT) plus a **ghost-markdown** model — markdown syntax disappears as you type; storage is Tiptap JSON, and markdown is input UX only.
 
-> **Status: extracted baseline, pre-rework.** This repo was seeded from Cord's in-tree editor (`apps/desktop/src/renderer/components/editor/`) so a significant rework can happen in isolation. It does **not** build standalone yet — see [Decoupling from Cord](#decoupling-from-cord).
+> **Status: extracted, pre-rework. Private until it stands on its own.**
+>
+> This repo was seeded from Cord's in-tree editor
+> (`apps/desktop/src/renderer/components/editor/`) so a significant rework can
+> happen in isolation. It does **not** build standalone yet — see
+> [Decoupling from Cord](#decoupling-from-cord), and `PACKAGING.md` on the
+> `sync/cord-v1.6-editor` branch for the ordered plan.
+>
+> **This repository goes public once Shuttle is properly separated** — a narrow
+> host interface in place of the imports into Cord's stores and IPC client, its
+> own types, and a build that stands up without Cord. Cord itself is public
+> already; publishing Shuttle in its current state would mean publishing
+> something nobody outside this org could actually build or use.
 
 ## What's here
 
@@ -46,4 +58,10 @@ pnpm test        # bun test
 
 ## License
 
-Editor built on Tiptap OSS (MIT). This repository is private / all rights reserved.
+Editor built on Tiptap OSS (MIT). This repository is private / all rights
+reserved for now.
+
+The licence has to be settled before it goes public. Cord is AGPL-3.0-or-later
+and will consume Shuttle as a dependency, so whatever is chosen has to be
+compatible with that — worth deciding deliberately rather than at the moment of
+publication.
