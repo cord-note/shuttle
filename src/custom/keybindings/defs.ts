@@ -133,15 +133,25 @@ function isAltGr(e: Pick<KeyEventLike, 'ctrlKey' | 'altKey'>, mac: boolean): boo
   return !mac && e.ctrlKey && e.altKey;
 }
 
+const USABLE_TYPED_KEY = /^[A-Z0-9]$/;
+
 /**
- * `e.key` is the character produced *after* modifiers and keyboard layout
- * are applied, so matching a default like `Mod+Shift+8` against `e.key`
- * alone breaks on many layouts: Shift+8 types '*', mac Option+1 types '¡',
- * and a Cyrillic layout's Ctrl+B types 'и'. `e.code` reports the physical
- * key regardless of layout, so whenever a modifier is held (and the key
- * isn't produced by AltGr — see below) we try a physical-key accel first,
- * then fall back to the `e.key`-based accel so still-unmapped combinations
- * and non-letter/digit keys keep working.
+ * The physical key (`e.code`) is only a fallback for when the *typed*
+ * character is useless for matching a shortcut against — Shift+digit
+ * symbols ('*' for Shift+8), mac Option characters ('¡' for Option+1), or a
+ * non-Latin layout's letters ('и' for a Cyrillic Ctrl+B). Mirroring
+ * prosemirror-keymap's approach: when `e.key` already normalizes to a plain
+ * ASCII letter or digit, it is a perfectly good, layout-correct accelerator
+ * on its own and the physical-key candidate is skipped — otherwise, on
+ * Dvorak, Colemak, AZERTY and other remapped layouts, the physical position
+ * would hijack a shortcut the user meant to type by character (Dvorak
+ * Ctrl+X has the physical code of QWERTY's B, so a physical-first match
+ * would fire "bold" instead of "cut"; AZERTY Ctrl+A would record as
+ * Mod+Q). So the physical-key candidate is added only when: a physical key
+ * exists, a ctrl/meta/alt modifier is held, the combination isn't AltGr
+ * (see below), and the typed key is not already a usable ASCII
+ * letter/digit. We then always fall back to the `e.key`-based accel so
+ * still-unmapped combinations and non-letter/digit keys keep working.
  *
  * AltGr (Right Alt) is reported on Windows/Linux as ctrlKey + altKey, and
  * AltGr+<letter> commonly *types* an accented character on European layouts
@@ -158,11 +168,12 @@ export function eventToAccels(e: KeyEventLike, mac: boolean = IS_MAC): string[] 
 
   const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
   const phys = physicalKey(e.code);
-  if (phys && hasModifier && !isAltGr(e, mac)) {
+  const typedKey = normalizeKey(e.key);
+  if (phys && hasModifier && !isAltGr(e, mac) && !USABLE_TYPED_KEY.test(typedKey)) {
     accels.push([...mods, phys].join('+'));
   }
 
-  const keyAccel = [...mods, normalizeKey(e.key)].join('+');
+  const keyAccel = [...mods, typedKey].join('+');
   if (!accels.includes(keyAccel)) accels.push(keyAccel);
 
   return accels;

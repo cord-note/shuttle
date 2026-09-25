@@ -53,6 +53,12 @@ describe('eventToAccel', () => {
     expect(eventToAccel(key('ć', { ctrlKey: true, altKey: true }, 'KeyC'), false))
       .toBe('Mod+Alt+Ć');
   });
+  it('does not hijack Dvorak Ctrl+X (types "x", physical code is KeyB) into Mod+B', () => {
+    expect(eventToAccel(key('x', { ctrlKey: true }, 'KeyB'), false)).toBe('Mod+X');
+  });
+  it('does not hijack AZERTY Ctrl+A (types "a", physical code is KeyQ) into Mod+Q', () => {
+    expect(eventToAccel(key('a', { ctrlKey: true }, 'KeyQ'), false)).toBe('Mod+A');
+  });
 });
 
 describe('eventToAccels', () => {
@@ -70,6 +76,12 @@ describe('eventToAccels', () => {
   });
   it('does not duplicate when no modifier is held (physical candidate is skipped)', () => {
     expect(eventToAccels(key('a', {}, 'KeyA'), false)).toEqual(['A']);
+  });
+  it('skips the physical candidate for Dvorak Ctrl+X (typed key is already a usable ASCII letter)', () => {
+    expect(eventToAccels(key('x', { ctrlKey: true }, 'KeyB'), false)).toEqual(['Mod+X']);
+  });
+  it('skips the physical candidate for AZERTY Ctrl+A (typed key is already a usable ASCII letter)', () => {
+    expect(eventToAccels(key('a', { ctrlKey: true }, 'KeyQ'), false)).toEqual(['Mod+A']);
   });
   it('returns an empty array for a bare modifier press', () => {
     expect(eventToAccels(key('Shift', { shiftKey: true }), false)).toEqual([]);
