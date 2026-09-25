@@ -37,14 +37,27 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
  * needs the host's data or causes a side effect outside the document goes
  * through here, which is what lets the package run in the playground and in
  * tests against a fake.
+ *
+ * Promise-returning methods may reject; Shuttle catches the rejection,
+ * degrades the affected UI, and reports it through `log`.
  */
 export interface ShuttleHost {
   // ── Lookups ───────────────────────────────────────────────────────────────
   /** Notes matching a query, for `[[` autocomplete and the reference picker. */
   searchNotes(query: string): Promise<NoteRef[]>;
-  /** Exact (case-insensitive) title match, for typed `[[Title]]` and markdown. */
+  /**
+   * Exact (case-insensitive) title match, for typed `[[Title]]` and markdown.
+   * Must be synchronous — called from input rules and markdown parsing.
+   * Answer from an in-memory cache of the current vault. Input is trimmed;
+   * matching is case-insensitive; with duplicate titles, return any one
+   * consistently.
+   */
   findNoteByTitle(title: string): NoteRef | null;
-  /** Every note title, for unlinked-mention highlighting. */
+  /**
+   * Every note title, for unlinked-mention highlighting. Must be synchronous
+   * — called from input rules and markdown parsing. Answer from an
+   * in-memory cache of the current vault.
+   */
   listNoteTitles(): NoteRef[];
   /** Blocks of one note, for the second step of the reference picker. */
   listBlocks(noteId: string): Promise<BlockSummary[]>;
@@ -59,12 +72,15 @@ export interface ShuttleHost {
   // ── Side effects ──────────────────────────────────────────────────────────
   /** Store a file and return the `src` to persist in the document. */
   uploadFile(file: File): Promise<{ src: string }>;
-  /** Wiki-link targets that appeared in or disappeared from the document. */
-  onLinksChanged(diff: { added: string[]; removed: string[] }): void;
-  /** Fragment link nodes removed from the document, by their link id. */
-  onFragmentLinksRemoved(linkIds: string[]): void;
+  /**
+   * Note ids of wiki-link targets that appeared in or disappeared from
+   * document `docKey`. Fires on edit, before the debounced save.
+   */
+  onLinksChanged(docKey: string, diff: { added: string[]; removed: string[] }): void;
+  /** Fragment link nodes removed from document `docKey`, by their link id. */
+  onFragmentLinksRemoved(docKey: string, linkIds: string[]): void;
   /** A per-block action the host implements (tagging, linking a block). */
-  onFragmentAction(action: { type: FragmentActionType; blockId: string }): void;
+  onFragmentAction(action: { docKey: string; type: FragmentActionType; blockId: string }): void;
   /** Navigate to a note, optionally scrolling to one of its blocks. */
   openNote(noteId: string, blockId?: string): void;
   /** Structured logging; Shuttle never calls `console` directly. */

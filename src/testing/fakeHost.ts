@@ -3,9 +3,9 @@ import type {
 } from '../host';
 
 export interface FakeHostCalls {
-  linksChanged: { added: string[]; removed: string[] }[];
-  fragmentLinksRemoved: string[][];
-  fragmentActions: { type: FragmentActionType; blockId: string }[];
+  linksChanged: { docKey: string; added: string[]; removed: string[] }[];
+  fragmentLinksRemoved: { docKey: string; linkIds: string[] }[];
+  fragmentActions: { docKey: string; type: FragmentActionType; blockId: string }[];
   opened: { noteId: string; blockId?: string }[];
   uploads: File[];
   logs: { level: LogLevel; message: string; data?: unknown }[];
@@ -73,11 +73,11 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
       uploadCount += 1;
       return { src: `attachment:up${uploadCount}` };
     },
-    onLinksChanged(diff) {
-      calls.linksChanged.push(diff);
+    onLinksChanged(docKey, diff) {
+      calls.linksChanged.push({ docKey, ...diff });
     },
-    onFragmentLinksRemoved(linkIds) {
-      calls.fragmentLinksRemoved.push(linkIds);
+    onFragmentLinksRemoved(docKey, linkIds) {
+      calls.fragmentLinksRemoved.push({ docKey, linkIds });
     },
     onFragmentAction(action) {
       calls.fragmentActions.push(action);
