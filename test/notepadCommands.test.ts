@@ -28,6 +28,12 @@ const bulletList = (items: Array<{ text: string; id: string }>, listId: string):
   })),
 });
 
+const codeBlockJson = (text: string, blockId: string, language: string | null = null): JSONContent => ({
+  type: 'codeBlock',
+  attrs: { blockId, language },
+  content: text ? [{ type: 'text', text }] : [],
+});
+
 function make(
   content: JSONContent[],
   extraExtensions: unknown[] = [TaskList, TaskItem],
@@ -209,6 +215,38 @@ describe('block commands', () => {
   it('returns false when the target type is not in the schema', () => {
     const e = make([p('hello', 'a')], []); // no TaskList/TaskItem installed
     expect(e.commands.turnInto(2, 'taskList')).toBe(false);
+  });
+
+  it('keeps the caret inside a block converted to code, at the same text offset', () => {
+    const e = make([p('hello', 'a')]);
+    const top = topLevelAt(e.state.doc, 0)!;
+    const caretPos = top.from + 1 + 3; // offset 3 inside "hello"
+    e.commands.setTextSelection(caretPos);
+
+    expect(e.commands.turnInto(2, 'codeBlock')).toBe(true);
+
+    const newTop = topLevelAt(e.state.doc, e.state.selection.from)!;
+    expect(newTop.node.type.name).toBe('codeBlock');
+    expect(e.state.selection.from - newTop.from).toBe(4); // 1 (open) + offset 3
+  });
+
+  it('leaves an existing codeBlock untouched, keeping its language', () => {
+    const e = make([codeBlockJson('let x = 1;', 'a', 'javascript')]);
+    const before = e.state.doc.toJSON();
+
+    expect(e.commands.turnInto(2, 'codeBlock')).toBe(false);
+    expect(e.state.doc.toJSON()).toEqual(before);
+  });
+
+  it('does not mutate the document when only checking turnInto via can()', () => {
+    const e = make([p('hello', 'a'), p('two', 'b')]);
+    const before = e.state.doc.toJSON();
+
+    expect(e.can().turnInto(2, 'heading', 2)).toBe(true);
+    expect(e.state.doc.toJSON()).toEqual(before);
+
+    expect(e.can().turnInto(2, 'codeBlock')).toBe(true);
+    expect(e.state.doc.toJSON()).toEqual(before);
   });
 
   it('keeps ids unique after a split', () => {

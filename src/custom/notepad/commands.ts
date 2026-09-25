@@ -139,10 +139,19 @@ export const BlockCommands = Extension.create({
 
       turnInto:
         (pos, type, level) =>
-        ({ state, tr, chain }) => {
+        ({ state, tr, dispatch, chain }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top || top.node.isAtom) return false;
-          if (!state.schema.nodes[type]) return false;
+          // A `return false` from a raw command still gets its (possibly
+          // no-op) `tr` auto-dispatched by Tiptap's CommandManager, which
+          // would let plugins like StarterKit's TrailingNode append a
+          // transaction on top of it. `preventDispatch` keeps a refusal an
+          // actual no-op.
+          const refuse = () => { tr.setMeta('preventDispatch', true); return false as const; };
+          if (!top || top.node.isAtom) return refuse();
+          if (!state.schema.nodes[type]) return refuse();
+          // Already the target type: converting a codeBlock to a codeBlock
+          // would silently drop its `language` attr, so treat it as a no-op.
+          if (type === 'codeBlock' && top.node.type.name === 'codeBlock') return refuse();
 
           const id = top.node.attrs['blockId'];
           const restoreId = typeof id === 'string' && id ? id : null;
@@ -150,18 +159,34 @@ export const BlockCommands = Extension.create({
 
           if (type === 'codeBlock') {
             const codeBlockType = state.schema.nodes['codeBlock'];
-            if (!codeBlockType) return false;
+            if (!codeBlockType) return refuse();
             const texts: string[] = [];
-            top.node.descendants((node) => {
-              if (node.isTextblock) texts.push(node.textContent);
-            });
+            if (top.node.isTextblock) {
+              texts.push(top.node.textContent);
+            } else {
+              top.node.descendants((node) => {
+                if (node.isTextblock) texts.push(node.textContent);
+              });
+            }
             const joined = texts.join('\n');
-            const node = codeBlockType.create(
-              { blockId: restoreId },
-              joined ? state.schema.text(joined) : null,
-            );
-            tr.replaceWith(top.from, top.from + top.node.nodeSize, node);
-            tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map(saved))));
+
+            if (dispatch) {
+              const node = codeBlockType.create(
+                { blockId: restoreId },
+                joined ? state.schema.text(joined) : null,
+              );
+              tr.replaceWith(top.from, top.from + top.node.nodeSize, node);
+
+              // `replaceWith` maps a caret that was inside the replaced range
+              // to the end of the range — i.e. into the *next* block — so a
+              // caret that was inside the source block is repositioned by
+              // text offset instead of via tr.mapping.
+              const insideBlock = top.from < saved && saved < top.from + top.node.nodeSize;
+              const caretPos = insideBlock
+                ? top.from + 1 + Math.min(state.doc.textBetween(top.from, saved, '\n').length, joined.length)
+                : tr.mapping.map(saved);
+              tr.setSelection(TextSelection.near(tr.doc.resolve(caretPos)));
+            }
             return true;
           }
 
@@ -171,9 +196,11 @@ export const BlockCommands = Extension.create({
           const to = top.from + top.node.nodeSize - 1;
           tr.setSelection(TextSelection.between(tr.doc.resolve(from), tr.doc.resolve(to)));
 
-          const finalize = ({ tr: t }: { tr: typeof tr }): boolean => {
-            if (restoreId) t.setNodeAttribute(top.from, 'blockId', restoreId);
-            t.setSelection(TextSelection.near(t.doc.resolve(t.mapping.map(saved))));
+          const finalize = ({ tr: t, dispatch: d }: { tr: typeof tr; dispatch?: typeof dispatch }): boolean => {
+            if (d) {
+              if (restoreId) t.setNodeAttribute(top.from, 'blockId', restoreId);
+              t.setSelection(TextSelection.near(t.doc.resolve(t.mapping.map(saved))));
+            }
             return true;
           };
 
