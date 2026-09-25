@@ -22,9 +22,46 @@ declare module '@tiptap/core' {
 }
 
 /**
+ * A `blockId` is a top-level block's permanent identity — tags, links and
+ * transclusions key off it — so it must never be silently duplicated.
+ * Strips `blockId` from `node` and every descendant that carries one, by
+ * rebuilding from JSON with those attrs deleted. UniqueID then mints fresh
+ * ids for all of them on the next transaction step.
+ */
+function stripBlockIds(json: Record<string, unknown>): Record<string, unknown> {
+  let next = json;
+  const attrs = next['attrs'];
+  if (attrs && typeof attrs === 'object' && 'blockId' in attrs) {
+    const rest = { ...(attrs as Record<string, unknown>) };
+    delete rest['blockId'];
+    next = { ...next, attrs: rest };
+  }
+  const content = next['content'];
+  if (Array.isArray(content)) {
+    next = { ...next, content: content.map((child) => stripBlockIds(child as Record<string, unknown>)) };
+  }
+  return next;
+}
+
+function withoutIds(node: PMNode): PMNode {
+  return node.type.schema.nodeFromJSON(stripBlockIds(node.toJSON() as Record<string, unknown>));
+}
+
+/**
  * Block-level operations for notepad mode. Blocks are just the document's
  * top-level nodes, so these are thin wrappers around transactions and
  * Tiptap's built-in node commands — no wrapper node, no normaliser.
+ *
+ * `turnInto` policy when the source block contains more than one textblock
+ * (e.g. a multi-item list):
+ *  - Wrap targets (bulletList, orderedList, taskList, blockquote) regroup
+ *    everything into a single resulting top-level node, which keeps the id.
+ *  - paragraph / heading split into one top-level node per source textblock;
+ *    only the first keeps the id, the rest are minted fresh ones.
+ *  - codeBlock joins every source textblock's text with '\n' into a single
+ *    code block, which keeps the id. Implemented directly (replaceWith)
+ *    rather than via clearNodes + setCodeBlock, since a code block cannot
+ *    represent the split any other way.
  */
 export const BlockCommands = Extension.create({
   name: 'blockCommands',
@@ -47,9 +84,15 @@ export const BlockCommands = Extension.create({
             let insertAt = 0;
             for (let i = 0; i < target; i++) insertAt += remaining[i]!.nodeSize;
 
+            // Preserve the caret's offset within the block when the
+            // selection was inside it (not merely touching its boundary).
+            const off = state.selection.from - top.from;
+            const withinBlock = off > 0 && off < top.node.nodeSize;
+
             tr.delete(top.from, top.from + top.node.nodeSize);
             tr.insert(insertAt, top.node);
-            tr.setSelection(TextSelection.near(tr.doc.resolve(insertAt + 1)));
+            const targetPos = withinBlock ? insertAt + off : insertAt;
+            tr.setSelection(TextSelection.near(tr.doc.resolve(targetPos)));
             tr.scrollIntoView();
           }
           return true;
@@ -61,14 +104,10 @@ export const BlockCommands = Extension.create({
           const top = topLevelAt(state.doc, pos);
           if (!top) return false;
           if (dispatch) {
-            const copy = top.node.type.create(
-              { ...top.node.attrs, blockId: null },
-              top.node.content,
-              top.node.marks,
-            );
+            const copy = withoutIds(top.node);
             const after = top.from + top.node.nodeSize;
             tr.insert(after, copy);
-            tr.setSelection(TextSelection.near(tr.doc.resolve(after + 1)));
+            tr.setSelection(TextSelection.near(tr.doc.resolve(after)));
           }
           return true;
         },
@@ -78,6 +117,13 @@ export const BlockCommands = Extension.create({
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
           if (!top) return false;
+
+          const isOnlyEmptyParagraph =
+            state.doc.childCount <= 1 &&
+            top.node.type.name === 'paragraph' &&
+            top.node.content.size === 0;
+          if (isOnlyEmptyParagraph) return false;
+
           if (dispatch) {
             if (state.doc.childCount <= 1) {
               const empty = state.schema.nodes['paragraph']!.create();
@@ -96,6 +142,28 @@ export const BlockCommands = Extension.create({
         ({ state, tr, chain }) => {
           const top = topLevelAt(state.doc, pos);
           if (!top || top.node.isAtom) return false;
+          if (!state.schema.nodes[type]) return false;
+
+          const id = top.node.attrs['blockId'];
+          const restoreId = typeof id === 'string' && id ? id : null;
+          const saved = state.selection.from;
+
+          if (type === 'codeBlock') {
+            const codeBlockType = state.schema.nodes['codeBlock'];
+            if (!codeBlockType) return false;
+            const texts: string[] = [];
+            top.node.descendants((node) => {
+              if (node.isTextblock) texts.push(node.textContent);
+            });
+            const joined = texts.join('\n');
+            const node = codeBlockType.create(
+              { blockId: restoreId },
+              joined ? state.schema.text(joined) : null,
+            );
+            tr.replaceWith(top.from, top.from + top.node.nodeSize, node);
+            tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map(saved))));
+            return true;
+          }
 
           // Select the whole block, flatten it to paragraphs with the official
           // clearNodes, then apply the target type across the selection.
@@ -103,15 +171,20 @@ export const BlockCommands = Extension.create({
           const to = top.from + top.node.nodeSize - 1;
           tr.setSelection(TextSelection.between(tr.doc.resolve(from), tr.doc.resolve(to)));
 
+          const finalize = ({ tr: t }: { tr: typeof tr }): boolean => {
+            if (restoreId) t.setNodeAttribute(top.from, 'blockId', restoreId);
+            t.setSelection(TextSelection.near(t.doc.resolve(t.mapping.map(saved))));
+            return true;
+          };
+
           const c = chain().clearNodes();
           switch (type) {
-            case 'paragraph':   return c.setParagraph().run();
-            case 'heading':     return c.setHeading({ level: level ?? 1 }).run();
-            case 'bulletList':  return c.toggleBulletList().run();
-            case 'orderedList': return c.toggleOrderedList().run();
-            case 'taskList':    return c.toggleTaskList().run();
-            case 'blockquote':  return c.setBlockquote().run();
-            case 'codeBlock':   return c.setCodeBlock().run();
+            case 'paragraph':   return c.setParagraph().command(finalize).run();
+            case 'heading':     return c.setHeading({ level: level ?? 1 }).command(finalize).run();
+            case 'bulletList':  return c.toggleBulletList().command(finalize).run();
+            case 'orderedList': return c.toggleOrderedList().command(finalize).run();
+            case 'taskList':    return c.toggleTaskList().command(finalize).run();
+            case 'blockquote':  return c.setBlockquote().command(finalize).run();
           }
         },
     };

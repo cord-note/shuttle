@@ -17,9 +17,9 @@ export interface TopLevel {
 export function topLevelAt(doc: PMNode, pos: number): TopLevel | null {
   if (doc.childCount === 0) return null;
   const clamped = Math.max(0, Math.min(pos, doc.content.size));
-  const index = Math.min(doc.resolve(clamped).index(0), doc.childCount - 1);
-  let from = 0;
-  for (let i = 0; i < index; i++) from += doc.child(i).nodeSize;
+  const resolved = doc.resolve(clamped);
+  const index = Math.min(resolved.index(0), doc.childCount - 1);
+  const from = resolved.posAtIndex(index, 0);
   return { index, from, node: doc.child(index) };
 }
 
