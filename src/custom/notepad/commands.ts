@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core';
-import { TextSelection } from '@tiptap/pm/state';
+import { TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { topLevelAt } from '../../doc/topLevel';
 
@@ -48,6 +48,22 @@ function withoutIds(node: PMNode): PMNode {
 }
 
 /**
+ * A `return false` from a raw Tiptap command still gets its `tr` — even an
+ * untouched, no-op one — auto-dispatched by `CommandManager.commands`
+ * (`editor.commands.foo()` dispatches unconditionally unless `tr` carries
+ * `preventDispatch`). Dispatching that empty transaction still runs every
+ * plugin's `appendTransaction`, so a refusal without this guard can trigger
+ * unrelated side effects — e.g. StarterKit's TrailingNode silently appending
+ * an empty paragraph whenever the (untouched) document's last node isn't
+ * already one. Every early-false return in this file goes through `refuse`
+ * so a refused command is an actual no-op.
+ */
+function refuse(tr: Transaction): false {
+  tr.setMeta('preventDispatch', true);
+  return false;
+}
+
+/**
  * Block-level operations for notepad mode. Blocks are just the document's
  * top-level nodes, so these are thin wrappers around transactions and
  * Tiptap's built-in node commands — no wrapper node, no normaliser.
@@ -72,9 +88,9 @@ export const BlockCommands = Extension.create({
         (pos, delta) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return false;
+          if (!top) return refuse(tr);
           const target = top.index + delta;
-          if (target < 0 || target >= state.doc.childCount) return false;
+          if (target < 0 || target >= state.doc.childCount) return refuse(tr);
 
           if (dispatch) {
             // Insertion point in post-deletion coordinates: the sizes of the
@@ -102,7 +118,7 @@ export const BlockCommands = Extension.create({
         (pos) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return false;
+          if (!top) return refuse(tr);
           if (dispatch) {
             const copy = withoutIds(top.node);
             const after = top.from + top.node.nodeSize;
@@ -116,13 +132,13 @@ export const BlockCommands = Extension.create({
         (pos) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return false;
+          if (!top) return refuse(tr);
 
           const isOnlyEmptyParagraph =
             state.doc.childCount <= 1 &&
             top.node.type.name === 'paragraph' &&
             top.node.content.size === 0;
-          if (isOnlyEmptyParagraph) return false;
+          if (isOnlyEmptyParagraph) return refuse(tr);
 
           if (dispatch) {
             if (state.doc.childCount <= 1) {
@@ -141,17 +157,11 @@ export const BlockCommands = Extension.create({
         (pos, type, level) =>
         ({ state, tr, dispatch, chain }) => {
           const top = topLevelAt(state.doc, pos);
-          // A `return false` from a raw command still gets its (possibly
-          // no-op) `tr` auto-dispatched by Tiptap's CommandManager, which
-          // would let plugins like StarterKit's TrailingNode append a
-          // transaction on top of it. `preventDispatch` keeps a refusal an
-          // actual no-op.
-          const refuse = () => { tr.setMeta('preventDispatch', true); return false as const; };
-          if (!top || top.node.isAtom) return refuse();
-          if (!state.schema.nodes[type]) return refuse();
+          if (!top || top.node.isAtom) return refuse(tr);
+          if (!state.schema.nodes[type]) return refuse(tr);
           // Already the target type: converting a codeBlock to a codeBlock
           // would silently drop its `language` attr, so treat it as a no-op.
-          if (type === 'codeBlock' && top.node.type.name === 'codeBlock') return refuse();
+          if (type === 'codeBlock' && top.node.type.name === 'codeBlock') return refuse(tr);
 
           const id = top.node.attrs['blockId'];
           const restoreId = typeof id === 'string' && id ? id : null;
@@ -159,7 +169,7 @@ export const BlockCommands = Extension.create({
 
           if (type === 'codeBlock') {
             const codeBlockType = state.schema.nodes['codeBlock'];
-            if (!codeBlockType) return refuse();
+            if (!codeBlockType) return refuse(tr);
             const texts: string[] = [];
             if (top.node.isTextblock) {
               texts.push(top.node.textContent);

@@ -100,6 +100,19 @@ describe('block commands', () => {
     expect(e.commands.moveBlock(2, -1)).toBe(false);
   });
 
+  it('leaves the document unchanged when refused, even with TrailingNode active', () => {
+    // Default StarterKit config (trailingNode enabled). The doc's last node
+    // is a horizontalRule, not a paragraph, so if a refused command were to
+    // let its empty transaction get dispatched anyway, TrailingNode's
+    // appendTransaction would silently append a trailing empty paragraph.
+    const e = make([p('one', 'a'), { type: 'horizontalRule' }]);
+    const before = e.state.doc.toJSON();
+    const top = topLevelAt(e.state.doc, e.state.doc.content.size)!; // the hr, already last
+
+    expect(e.commands.moveBlock(top.from, 1)).toBe(false);
+    expect(e.state.doc.toJSON()).toEqual(before);
+  });
+
   it('keeps a node selection on the moved atom', () => {
     // trailingNode disabled: once the hr becomes the last node, StarterKit's
     // TrailingNode would otherwise auto-append an empty paragraph after it,
