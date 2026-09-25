@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core';
-import { TextSelection, type Transaction } from '@tiptap/pm/state';
+import { TextSelection } from '@tiptap/pm/state';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { topLevelAt } from '../../doc/topLevel';
 
@@ -48,22 +48,6 @@ function withoutIds(node: PMNode): PMNode {
 }
 
 /**
- * A `return false` from a raw Tiptap command still gets its `tr` — even an
- * untouched, no-op one — auto-dispatched by `CommandManager.commands`
- * (`editor.commands.foo()` dispatches unconditionally unless `tr` carries
- * `preventDispatch`). Dispatching that empty transaction still runs every
- * plugin's `appendTransaction`, so a refusal without this guard can trigger
- * unrelated side effects — e.g. StarterKit's TrailingNode silently appending
- * an empty paragraph whenever the (untouched) document's last node isn't
- * already one. Every early-false return in this file goes through `refuse`
- * so a refused command is an actual no-op.
- */
-function refuse(tr: Transaction): false {
-  tr.setMeta('preventDispatch', true);
-  return false;
-}
-
-/**
  * Block-level operations for notepad mode. Blocks are just the document's
  * top-level nodes, so these are thin wrappers around transactions and
  * Tiptap's built-in node commands — no wrapper node, no normaliser.
@@ -88,9 +72,9 @@ export const BlockCommands = Extension.create({
         (pos, delta) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return refuse(tr);
+          if (!top) return false;
           const target = top.index + delta;
-          if (target < 0 || target >= state.doc.childCount) return refuse(tr);
+          if (target < 0 || target >= state.doc.childCount) return false;
 
           if (dispatch) {
             // Insertion point in post-deletion coordinates: the sizes of the
@@ -118,7 +102,7 @@ export const BlockCommands = Extension.create({
         (pos) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return refuse(tr);
+          if (!top) return false;
           if (dispatch) {
             const copy = withoutIds(top.node);
             const after = top.from + top.node.nodeSize;
@@ -132,13 +116,13 @@ export const BlockCommands = Extension.create({
         (pos) =>
         ({ state, tr, dispatch }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top) return refuse(tr);
+          if (!top) return false;
 
           const isOnlyEmptyParagraph =
             state.doc.childCount <= 1 &&
             top.node.type.name === 'paragraph' &&
             top.node.content.size === 0;
-          if (isOnlyEmptyParagraph) return refuse(tr);
+          if (isOnlyEmptyParagraph) return false;
 
           if (dispatch) {
             if (state.doc.childCount <= 1) {
@@ -157,11 +141,11 @@ export const BlockCommands = Extension.create({
         (pos, type, level) =>
         ({ state, tr, dispatch, chain }) => {
           const top = topLevelAt(state.doc, pos);
-          if (!top || top.node.isAtom) return refuse(tr);
-          if (!state.schema.nodes[type]) return refuse(tr);
+          if (!top || top.node.isAtom) return false;
+          if (!state.schema.nodes[type]) return false;
           // Already the target type: converting a codeBlock to a codeBlock
           // would silently drop its `language` attr, so treat it as a no-op.
-          if (type === 'codeBlock' && top.node.type.name === 'codeBlock') return refuse(tr);
+          if (type === 'codeBlock' && top.node.type.name === 'codeBlock') return false;
 
           const id = top.node.attrs['blockId'];
           const restoreId = typeof id === 'string' && id ? id : null;
@@ -169,7 +153,7 @@ export const BlockCommands = Extension.create({
 
           if (type === 'codeBlock') {
             const codeBlockType = state.schema.nodes['codeBlock'];
-            if (!codeBlockType) return refuse(tr);
+            if (!codeBlockType) return false;
             const texts: string[] = [];
             if (top.node.isTextblock) {
               texts.push(top.node.textContent);

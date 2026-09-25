@@ -100,17 +100,32 @@ describe('block commands', () => {
     expect(e.commands.moveBlock(2, -1)).toBe(false);
   });
 
-  it('leaves the document unchanged when refused, even with TrailingNode active', () => {
-    // Default StarterKit config (trailingNode enabled). The doc's last node
-    // is a horizontalRule, not a paragraph, so if a refused command were to
-    // let its empty transaction get dispatched anyway, TrailingNode's
-    // appendTransaction would silently append a trailing empty paragraph.
-    const e = make([p('one', 'a'), { type: 'horizontalRule' }]);
+  it('leaves the document unchanged when moveBlock is refused', () => {
+    // trailingNode disabled to isolate what we're actually asserting: that a
+    // refused moveBlock leaves the doc untouched on its own terms. With
+    // trailingNode on, the doc's last node being a horizontalRule (not a
+    // paragraph) would let StarterKit's TrailingNode append an empty
+    // paragraph on the transaction Tiptap dispatches after any command call
+    // (even a refused one, per normal Tiptap command semantics) — a benign,
+    // unrelated side effect this test isn't about.
+    const e = make([p('one', 'a'), { type: 'horizontalRule' }], [TaskList, TaskItem], { trailingNode: false });
     const before = e.state.doc.toJSON();
     const top = topLevelAt(e.state.doc, e.state.doc.content.size)!; // the hr, already last
 
     expect(e.commands.moveBlock(top.from, 1)).toBe(false);
     expect(e.state.doc.toJSON()).toEqual(before);
+  });
+
+  it('does not lose other chained commands when moveBlock is refused', () => {
+    // Block commands share one transaction with everything else in a chain
+    // (and with first()'s fallback). A refusal must only make the *chain's*
+    // overall run() return false — it must not discard work other commands
+    // in the same chain already did, so refusing must not set
+    // preventDispatch on the shared tr.
+    const e = make([p('one', 'a'), p('two', 'b')]);
+    const ranOk = e.chain().setTextSelection(3).insertContent('X').moveBlock(1, -1).run();
+    expect(ranOk).toBe(false);
+    expect(e.state.doc.textContent).toContain('X');
   });
 
   it('keeps a node selection on the moved atom', () => {
@@ -176,7 +191,7 @@ describe('block commands', () => {
   });
 
   it('does nothing when deleting the only, already-empty paragraph', () => {
-    const e = make([{ type: 'paragraph', attrs: { blockId: 'a' } }]);
+    const e = make([{ type: 'paragraph', attrs: { blockId: 'a' } }], [TaskList, TaskItem], { trailingNode: false });
     const before = e.state.doc.toJSON();
     expect(e.commands.deleteBlock(1)).toBe(false);
     expect(e.state.doc.toJSON()).toEqual(before);
@@ -244,7 +259,7 @@ describe('block commands', () => {
   });
 
   it('leaves an existing codeBlock untouched, keeping its language', () => {
-    const e = make([codeBlockJson('let x = 1;', 'a', 'javascript')]);
+    const e = make([codeBlockJson('let x = 1;', 'a', 'javascript')], [TaskList, TaskItem], { trailingNode: false });
     const before = e.state.doc.toJSON();
 
     expect(e.commands.turnInto(2, 'codeBlock')).toBe(false);
