@@ -33,10 +33,14 @@ export type KeybindingId =
   | 'block.delete'
   | 'block.insertRef';
 
+export type KeybindingGroup = 'Editor' | 'Blocks';
+
+export const KEYBINDING_GROUPS: readonly KeybindingGroup[] = ['Editor', 'Blocks'];
+
 export interface KeybindingDef {
   id: KeybindingId;
   label: string;
-  group: 'Editor' | 'Blocks';
+  group: KeybindingGroup;
   /** Empty string means "no default binding". */
   defaultAccel: string;
   /** Only active in notepad mode. */
@@ -70,32 +74,108 @@ export const SHUTTLE_KEYBINDINGS: readonly KeybindingDef[] = [
   { id: 'block.insertRef', label: 'Insert block reference', group: 'Blocks', defaultAccel: '',                    notepadOnly: true },
 ];
 
+/** The catalogue entry for `id`. Throws if `id` is not a known keybinding. */
+export function keybindingDef(id: KeybindingId): KeybindingDef {
+  const def = SHUTTLE_KEYBINDINGS.find((d) => d.id === id);
+  if (!def) throw new Error(`Unknown keybinding id: ${id}`);
+  return def;
+}
+
 export type KeybindingMap = Record<KeybindingId, string>;
 
-/** Defaults with the host's overrides laid over them. */
+/**
+ * Defaults with the host's overrides laid over them. An override that is not
+ * a string (e.g. corrupted settings JSON) is ignored and the default is used
+ * instead; an explicit empty-string override is kept as-is — it represents a
+ * binding the user cleared.
+ */
 export function resolveBindings(overrides: Partial<KeybindingMap>): KeybindingMap {
   const out = {} as KeybindingMap;
-  for (const def of SHUTTLE_KEYBINDINGS) out[def.id] = overrides[def.id] ?? def.defaultAccel;
+  for (const def of SHUTTLE_KEYBINDINGS) {
+    const v = overrides[def.id];
+    out[def.id] = typeof v === 'string' ? v : def.defaultAccel;
+  }
   return out;
 }
 
 const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta', 'AltGraph', 'CapsLock', 'Dead']);
 
-type KeyEventLike = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
+type KeyEventLike = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey'>;
 
-/** Canonical accelerator for a key event, or null for a bare modifier press. */
-export function eventToAccel(e: KeyEventLike, mac: boolean = IS_MAC): string | null {
-  if (MODIFIER_KEYS.has(e.key)) return null;
-  const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+function normalizeKey(key: string): string {
+  if (key === ' ') return 'Space';
+  return key.length === 1 ? key.toUpperCase() : key;
+}
 
+function modifierParts(e: KeyEventLike, mac: boolean): string[] {
   const parts: string[] = [];
   if (mac ? e.metaKey : e.ctrlKey) parts.push('Mod');
   if (mac && e.ctrlKey) parts.push('Ctrl');
   if (!mac && e.metaKey) parts.push('Meta');
   if (e.altKey) parts.push('Alt');
   if (e.shiftKey) parts.push('Shift');
-  parts.push(key);
-  return parts.join('+');
+  return parts;
+}
+
+/** `code` -> the layout-independent character it represents, or null. */
+function physicalKey(code: string): string | null {
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  return null;
+}
+
+/**
+ * True when the combination is Right Alt (AltGr) rather than a genuine
+ * Ctrl+Alt chord. Windows/Linux report AltGr as ctrlKey + altKey both true;
+ * macOS has no AltGr, so this is always false there.
+ */
+function isAltGr(e: Pick<KeyEventLike, 'ctrlKey' | 'altKey'>, mac: boolean): boolean {
+  return !mac && e.ctrlKey && e.altKey;
+}
+
+/**
+ * `e.key` is the character produced *after* modifiers and keyboard layout
+ * are applied, so matching a default like `Mod+Shift+8` against `e.key`
+ * alone breaks on many layouts: Shift+8 types '*', mac Option+1 types '¡',
+ * and a Cyrillic layout's Ctrl+B types 'и'. `e.code` reports the physical
+ * key regardless of layout, so whenever a modifier is held (and the key
+ * isn't produced by AltGr — see below) we try a physical-key accel first,
+ * then fall back to the `e.key`-based accel so still-unmapped combinations
+ * and non-letter/digit keys keep working.
+ *
+ * AltGr (Right Alt) is reported on Windows/Linux as ctrlKey + altKey, and
+ * AltGr+<letter> commonly *types* an accented character on European layouts
+ * (e.g. Polish AltGr+C -> 'ć'). That must never be read as the physical
+ * shortcut Mod+Alt+C — the user typed a character, not a shortcut — so the
+ * physical-key candidate is skipped whenever `isAltGr` is true and only the
+ * (layout-specific) key-based accel is offered.
+ */
+export function eventToAccels(e: KeyEventLike, mac: boolean = IS_MAC): string[] {
+  if (MODIFIER_KEYS.has(e.key)) return [];
+
+  const mods = modifierParts(e, mac);
+  const accels: string[] = [];
+
+  const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
+  const phys = physicalKey(e.code);
+  if (phys && hasModifier && !isAltGr(e, mac)) {
+    accels.push([...mods, phys].join('+'));
+  }
+
+  const keyAccel = [...mods, normalizeKey(e.key)].join('+');
+  if (!accels.includes(keyAccel)) accels.push(keyAccel);
+
+  return accels;
+}
+
+/**
+ * The best single accelerator for a key event, or null for a bare modifier
+ * press. Used by a host's shortcut recorder — the physical-key candidate is
+ * preferred so recorded strings are layout-independent and match the
+ * catalogue's defaults.
+ */
+export function eventToAccel(e: KeyEventLike, mac: boolean = IS_MAC): string | null {
+  return eventToAccels(e, mac)[0] ?? null;
 }
 
 const DISPLAY_KEYS: Record<string, string> = {
@@ -106,7 +186,9 @@ const DISPLAY_KEYS: Record<string, string> = {
 /** Human-readable accelerator for buttons and menus. */
 export function formatAccel(accel: string, mac: boolean = IS_MAC): string {
   if (!accel) return '';
-  const parts = accel.split('+').map((p) => {
+  // Lookahead requires a following character so a binding on the literal
+  // '+' key (e.g. "Mod++") doesn't get split into an empty trailing part.
+  const parts = accel.split(/\+(?=.)/).map((p) => {
     if (p === 'Mod') return mac ? '⌘' : 'Ctrl';
     if (p === 'Alt') return mac ? '⌥' : 'Alt';
     if (p === 'Shift') return mac ? '⇧' : 'Shift';
