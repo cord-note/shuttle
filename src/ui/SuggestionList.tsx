@@ -7,6 +7,8 @@ export interface KeyHandlerRef {
 export interface SuggestionListProps<Item> {
   items: Item[];
   command: (item: Item) => void;
+  /** A fetch is in flight; `items` are the previous results, possibly empty. */
+  loading?: boolean;
 }
 
 export interface ListRenderSpec<Item> {
@@ -22,7 +24,7 @@ export interface ListRenderSpec<Item> {
  * The popup forwards arrow keys and Enter through the imperative handle.
  */
 export function createSuggestionList<Item>(spec: ListRenderSpec<Item>) {
-  const List = forwardRef<KeyHandlerRef, SuggestionListProps<Item>>(({ items, command }, ref) => {
+  const List = forwardRef<KeyHandlerRef, SuggestionListProps<Item>>(({ items, command, loading = false }, ref) => {
     const [selected, setSelected] = useState(0);
     const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -31,6 +33,8 @@ export function createSuggestionList<Item>(spec: ListRenderSpec<Item>) {
 
     useImperativeHandle(ref, () => ({
       onKeyDown({ event }) {
+        // Swallow Enter while results are pending, so it neither picks a stale item nor splits the line.
+        if (loading && event.key === 'Enter') return true;
         if (items.length === 0) return false;
         if (event.key === 'ArrowUp') { setSelected((i) => (i - 1 + items.length) % items.length); return true; }
         if (event.key === 'ArrowDown') { setSelected((i) => (i + 1) % items.length); return true; }
@@ -40,7 +44,7 @@ export function createSuggestionList<Item>(spec: ListRenderSpec<Item>) {
     }));
 
     if (items.length === 0) {
-      return <div className="sh-popup"><div className="sh-popup-empty">{spec.empty}</div></div>;
+      return <div className="sh-popup"><div className="sh-popup-empty">{loading ? 'Searching…' : spec.empty}</div></div>;
     }
 
     let lastGroup: string | undefined;

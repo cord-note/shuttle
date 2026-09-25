@@ -18,6 +18,14 @@ export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize
   return () => {
     let renderer: ReactRenderer<KeyHandlerRef, SuggestionListProps<Item>> | null = null;
     let wrapper: HTMLDivElement | null = null;
+    // Suggestion reports `items: []` with `loading: true` before every fetch;
+    // keep showing the last results meanwhile instead of flashing "empty".
+    let shown: Item[] = [];
+
+    const listProps = (props: SuggestionProps<Item, Item>): SuggestionListProps<Item> => {
+      if (!props.loading) shown = props.items;
+      return { items: shown, command: props.command, loading: props.loading };
+    };
 
     const place = (clientRect: (() => DOMRect | null) | null | undefined): void => {
       const rect = clientRect?.();
@@ -34,12 +42,13 @@ export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize
       renderer?.destroy();
       wrapper = null;
       renderer = null;
+      shown = [];
     };
 
     return {
       onStart(props: SuggestionProps<Item, Item>) {
         renderer = new ReactRenderer(List, {
-          props: { items: props.items, command: props.command },
+          props: listProps(props),
           editor: props.editor,
         });
         wrapper = document.createElement('div');
@@ -49,7 +58,7 @@ export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize
         place(props.clientRect);
       },
       onUpdate(props: SuggestionProps<Item, Item>) {
-        renderer?.updateProps({ items: props.items, command: props.command });
+        renderer?.updateProps(listProps(props));
         place(props.clientRect);
       },
       onKeyDown(props: SuggestionKeyDownProps): boolean {

@@ -1,4 +1,4 @@
-import { InputRule, mergeAttributes, type JSONContent } from '@tiptap/core';
+import { InputRule, PasteRule, mergeAttributes, type JSONContent } from '@tiptap/core';
 import Mention from '@tiptap/extension-mention';
 import { PluginKey } from '@tiptap/pm/state';
 import { ReactNodeViewRenderer } from '@tiptap/react';
@@ -13,6 +13,7 @@ export const wikiLinkPluginKey = new PluginKey('wikiLinkSuggestion');
 
 const TYPED_LINK = /\[\[([^[\]|]+)(?:\|([^[\]]*))?\]\]$/;
 const MARKDOWN_LINK = /^\[\[([^[\]|]+)(?:\|([^[\]]*))?\]\]/;
+const PASTED_LINK = /\[\[([^[\]|]+)(?:\|([^[\]]*))?\]\]/g;
 
 export interface ViewOptions {
   /** False in tests: React node views need a mounted EditorContent. */
@@ -76,6 +77,41 @@ export function wikiLink(ctx: ShuttleContextRef, view: ViewOptions) {
       ];
     },
 
+    addPasteRules() {
+      return [
+        new PasteRule({
+          find: PASTED_LINK,
+          handler: ({ state, range, match }) => {
+            const note = ctx.current.host.findNoteByTitle((match[1] ?? '').trim());
+            // Not `null`: a null from any match vetoes the whole rule, links included.
+            if (!note) return;
+            const alias = (match[2] ?? '').trim() || null;
+            state.tr.replaceWith(range.from, range.to, this.type.create(wikiAttrs(note, alias)));
+          },
+        }),
+      ];
+    },
+
+    /**
+     * Backspace right after a typed `[[Title]]` converted undoes the
+     * conversion; otherwise it removes the whole link. Mention's own shortcut
+     * would turn the link back into its `[[` trigger text instead.
+     */
+    addKeyboardShortcuts() {
+      return {
+        Backspace: () => this.editor.commands.first(({ commands }) => [
+          () => commands.undoInputRule(),
+          () => commands.command(({ tr, state }) => {
+            const { empty, $from } = state.selection;
+            const before = $from.nodeBefore;
+            if (!empty || before?.type !== this.type) return false;
+            tr.delete($from.pos - before.nodeSize, $from.pos);
+            return true;
+          }),
+        ]),
+      };
+    },
+
     markdownTokenName: 'wikiLink',
     markdownTokenizer: {
       name: 'wikiLink',
@@ -109,7 +145,10 @@ export function wikiLink(ctx: ShuttleContextRef, view: ViewOptions) {
         .slice(0, 8),
       command: ({ editor, range, props }) => {
         const note = props as unknown as NoteRef;
-        editor.chain().focus().insertContentAt(range, [
+        // Swallow an existing space after the query so the link is followed by exactly one.
+        const after = editor.state.doc.textBetween(range.to, Math.min(range.to + 1, editor.state.doc.content.size));
+        const target = after === ' ' ? { from: range.from, to: range.to + 1 } : range;
+        editor.chain().focus().insertContentAt(target, [
           { type: 'mention', attrs: wikiAttrs(note, null) },
           { type: 'text', text: ' ' },
         ]).run();
