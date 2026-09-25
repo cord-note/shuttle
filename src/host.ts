@@ -48,15 +48,15 @@ export interface ShuttleHost {
   /**
    * Exact (case-insensitive) title match, for typed `[[Title]]` and markdown.
    * Must be synchronous — called from input rules and markdown parsing.
-   * Answer from an in-memory cache of the current vault. Input is trimmed;
-   * matching is case-insensitive; with duplicate titles, return any one
-   * consistently.
+   * Answer from an in-memory cache of the current vault. The host should trim
+   * the input; matching is case-insensitive; with duplicate titles, return
+   * any one consistently.
    */
   findNoteByTitle(title: string): NoteRef | null;
   /**
-   * Every note title, for unlinked-mention highlighting. Must be synchronous
-   * — called from input rules and markdown parsing. Answer from an
-   * in-memory cache of the current vault.
+   * Every note title, for unlinked-mention highlighting. Called by a
+   * decoration plugin on every document change, so it must be synchronous
+   * and cheap — answer from an in-memory cache of the current vault.
    */
   listNoteTitles(): NoteRef[];
   /** Blocks of one note, for the second step of the reference picker. */
