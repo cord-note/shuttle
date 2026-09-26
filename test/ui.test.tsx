@@ -400,3 +400,24 @@ describe('math align toggle', () => {
     expect(align).toBe('left');
   });
 });
+
+describe('math align toggle from the keyboard', () => {
+  it('appears when block math is node-selected, and hides when the editor turns read-only', () => {
+    const { container, editor } = mount('note');
+    act(() => { editor().commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }, { type: 'blockMath', attrs: { latex: 'x' } }, { type: 'paragraph' }] }); });
+    expect(container.querySelector('.sh-math-align')).toBeNull();
+    act(() => { editor().commands.setNodeSelection(2); });
+    const btn = container.querySelector('.sh-math-align') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.title).toBe('Align left');
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(editor().state.doc.child(1).attrs['align']).toBe('left');
+    act(() => { editor().commands.setNodeSelection(2); });
+    expect((container.querySelector('.sh-math-align') as HTMLButtonElement).title).toBe('Centre');
+    act(() => { editor().commands.setTextSelection(1); });
+    expect(container.querySelector('.sh-math-align')).toBeNull();
+    act(() => { editor().commands.setNodeSelection(2); });
+    act(() => { editor().setEditable(false); });
+    expect(container.querySelector('.sh-math-align')).toBeNull();
+  });
+});
