@@ -106,11 +106,24 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   const mentions = useRef<Set<string>>(new Set());
   const fragments = useRef<Set<string>>(new Set());
 
+  // What the load effect last committed. Set only in the commit phase: during
+  // render `docKey` may already name the next document, and StrictMode builds
+  // a throwaway editor whose updates must never be saved.
+  const loadedEditor = useRef<Editor | null>(null);
+  const loadedKey = useRef<string | null>(null);
+  /** Latest stored JSON of `loadedKey`, so a rebuilt editor resumes from it. */
+  const lastDoc = useRef<JSONContent | null>(null);
+
   const flush = (): void => {
     if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
     const p = pending.current;
     pending.current = null;
-    if (p) latest.current.onChange(p.key, p.doc);
+    if (!p) return;
+    try {
+      latest.current.onChange(p.key, p.doc);
+    } catch (error) {
+      ctx.current.host.log('error', 'Saving the document failed', { docKey: p.key, error: String(error) });
+    }
   };
 
   const reportStats = (editor: Editor): void => {
@@ -120,18 +133,21 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
     onStats({ words: counter.words(), characters: counter.characters() });
   };
 
+  const extensions = useMemo(() => buildExtensions(mode, ctx, {
+    reactViews: true,
+    twitchParent,
+    ...(placeholder ? { placeholder } : {}),
+    onOutline: (items) => setToc(items),
+  }), [mode, twitchParent, placeholder]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const editor = useEditor({
     immediatelyRender: true,
-    extensions: buildExtensions(mode, ctx, {
-      reactViews: true,
-      twitchParent,
-      ...(placeholder ? { placeholder } : {}),
-      onOutline: (items) => setToc(items),
-    }),
+    extensions,
     content: EMPTY_DOC,
     onUpdate: ({ editor: ed }) => {
-      if (legacyRef.current) return;
-      const { host: currentHost, docKey: key } = ctx.current;
+      const key = loadedKey.current;
+      if (ed !== loadedEditor.current || key === null || legacyRef.current) return;
+      const currentHost = ctx.current.host;
 
       const nextMentions = collectMentionTargets(ed.state.doc);
       const linkDiff = diffSets(mentions.current, nextMentions);
@@ -145,28 +161,46 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
 
       reportStats(ed);
 
-      pending.current = { key, doc: toSaved(ed) };
+      const saved = toSaved(ed);
+      lastDoc.current = saved;
+      pending.current = { key, doc: saved };
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(flush, latest.current.saveDebounceMs ?? DEFAULT_DEBOUNCE_MS);
     },
   }, [mode, twitchParent, placeholder]);
 
   // Load the document for this key, after writing the previous key's edit.
+  // The same key again means the editor was rebuilt (mode change, StrictMode),
+  // not a switch: resume from the live document, not the stale `doc` prop.
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     flush();
-    const stored = doc ?? EMPTY_DOC;
-    const valid = isValidDoc(editor.schema, stored);
-    legacyRef.current = !valid;
-    setLegacy(!valid);
-    if (!valid) host.log('warn', 'Document does not match the current schema; opened read-only', { docKey });
-    loadDocument(editor, valid ? stored : EMPTY_DOC);
-    editor.setEditable(valid, false);
+    const rebuilt = docKey === loadedKey.current;
+    if (rebuilt && !legacyRef.current) {
+      loadDocument(editor, lastDoc.current ?? doc ?? EMPTY_DOC);
+      editor.setEditable(true, false);
+    } else {
+      const stored = doc ?? EMPTY_DOC;
+      const valid = isValidDoc(editor.schema, stored);
+      legacyRef.current = !valid;
+      setLegacy(!valid);
+      if (!valid && !rebuilt) {
+        host.log('warn', 'Document does not match the current schema; opened read-only', { docKey });
+      }
+      loadDocument(editor, valid ? stored : EMPTY_DOC);
+      editor.setEditable(valid, false);
+    }
+    loadedEditor.current = editor;
+    loadedKey.current = docKey;
+    lastDoc.current = legacyRef.current ? null : toSaved(editor);
     mentions.current = collectMentionTargets(editor.state.doc);
     fragments.current = collectFragmentLinkIds(editor.state.doc);
     reportStats(editor);
-    setRefPicker(false);
-    setMath(null);
+    if (!rebuilt) {
+      setRefPicker(false);
+      setMath(null);
+      setFind(false);
+    }
   }, [docKey, editor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A new host may carry a new note list; rebuild the views derived from it.

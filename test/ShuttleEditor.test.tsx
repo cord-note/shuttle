@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test';
-import { act } from 'react';
+import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { ShuttleEditor, type ShuttleEditorProps } from '../src/ShuttleEditor';
@@ -19,7 +19,7 @@ interface Harness {
   host: ReturnType<typeof createFakeHost>;
 }
 
-function mount(initial: Partial<ShuttleEditorProps>): Harness {
+function mount(initial: Partial<ShuttleEditorProps>, options: { strict?: boolean } = {}): Harness {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -33,7 +33,8 @@ function mount(initial: Partial<ShuttleEditorProps>): Harness {
   };
   const render = (next: Partial<ShuttleEditorProps>) => {
     props = { ...props, ...next };
-    act(() => root!.render(<ShuttleEditor {...props} />));
+    const tree = <ShuttleEditor {...props} />;
+    act(() => root!.render(options.strict ? <StrictMode>{tree}</StrictMode> : tree));
   };
   render(initial);
   return { editor: () => current!, saves, render, host };
@@ -164,5 +165,55 @@ describe('ShuttleEditor', () => {
     expect(container!.querySelectorAll('.unlinked-mention').length).toBe(1);
     h.render({ host: createFakeHost({ notes: [] }) });
     expect(container!.querySelectorAll('.unlinked-mention').length).toBe(0);
+  });
+
+  it('does not save anything from the editor StrictMode discards', async () => {
+    const h = mount({}, { strict: true });
+    await act(async () => { await sleep(50); });
+    expect(h.saves).toEqual([]);
+    act(() => { h.editor().commands.insertContent('!'); });
+    await act(async () => { await sleep(30); });
+    expect(h.saves.length).toBe(1);
+    expect(h.saves[0]?.key).toBe('a');
+    expect(JSON.stringify(h.saves[0]?.doc)).toContain('one!');
+  });
+
+  it('keeps unsaved edits when the mode changes', async () => {
+    const h = mount({});
+    act(() => { h.editor().commands.insertContent('!'); });
+    h.render({ mode: 'notepad' });
+    expect(h.editor().getText()).toBe('one!');
+    act(() => { h.editor().commands.insertContent('?'); });
+    await act(async () => { await sleep(30); });
+    expect(h.saves.at(-1)?.key).toBe('a');
+    expect(JSON.stringify(h.saves.at(-1)?.doc)).toContain('one!?');
+  });
+
+  it('logs instead of crashing when saving throws', () => {
+    const h = mount({ onChange: () => { throw new Error('disk full'); } });
+    act(() => { h.editor().commands.insertContent('!'); });
+    h.render({ docKey: 'b', doc: doc('bee') });
+    expect(container!.querySelector('.sh-root')).not.toBeNull();
+    expect(h.editor().getText()).toBe('bee');
+    const error = h.host.calls.logs.find((l) => l.level === 'error');
+    expect(error?.message).toBe('Saving the document failed');
+    expect(error?.data).toEqual({ docKey: 'a', error: 'Error: disk full' });
+  });
+
+  it('switches between legacy and valid documents', async () => {
+    const legacy: JSONContent = { type: 'doc', content: [{ type: 'notepadBlock', content: [{ type: 'paragraph' }] }] };
+    const h = mount({ docKey: 'old1', doc: legacy });
+    expect(h.editor().isEditable).toBe(false);
+
+    h.render({ docKey: 'b', doc: doc('bee') });
+    expect(h.editor().isEditable).toBe(true);
+    act(() => { h.editor().commands.insertContent('!'); });
+
+    h.render({ docKey: 'old2', doc: legacy });
+    expect(h.editor().isEditable).toBe(false);
+    expect(container!.textContent).toContain('older format');
+    act(() => { h.editor().commands.insertContent('x'); });
+    await act(async () => { await sleep(30); });
+    expect(h.saves.map((s) => s.key)).toEqual(['b']);
   });
 });
