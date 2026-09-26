@@ -31,6 +31,7 @@ import { MarkdownClipboard } from '../custom/markdown/clipboard';
 import { shuttleImage } from '../custom/image/image';
 import { insertImageFiles } from '../custom/image/upload';
 import { unlinkedMentions } from '../custom/unlinkedMentions';
+import { BlockIdGuard } from '../custom/blockIdGuard';
 import { keybindings } from '../custom/keybindings/keybindings';
 import { slashCommand } from '../custom/slash/slash';
 
@@ -90,6 +91,7 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     Highlight,
     Subscript,
     Superscript,
+    BlockIdGuard,
     UniqueID.configure({
       attributeName: 'blockId',
       types: [...BLOCK_TYPES],

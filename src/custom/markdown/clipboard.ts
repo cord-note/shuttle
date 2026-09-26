@@ -1,3 +1,12 @@
+/**
+ * Markdown paste: plain-text clipboard content that looks like markdown is
+ * parsed into document nodes.
+ *
+ * Known limitation: this only sees text/plain-only clipboards. When the
+ * clipboard also carries text/html (VS Code, browsers, most editors),
+ * ProseMirror's HTML path wins and the markdown is not converted — the user
+ * gets the source app's HTML rendering (for VS Code, styled plain lines).
+ */
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Slice } from '@tiptap/pm/model';

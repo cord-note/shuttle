@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import type { JSONContent } from '@tiptap/core';
+import { EVERYTHING } from './fixtures';
 import { makeEditor, stripIds } from './helpers';
 
 /** Parse markdown, serialise it, parse again: the document must survive. */
@@ -50,5 +51,24 @@ describe('markdown', () => {
   it('parses details into a details node', () => {
     const { first } = roundTrip(':::details Summary\nBody text\n:::');
     expect(first.content?.[0]?.type).toBe('details');
+  });
+});
+
+/**
+ * Markdown is input UX; these are knowingly not representable, so a trip
+ * through `getMarkdown()` drops them. Anything else going missing is a bug.
+ */
+const MARKDOWN_LOSSY: readonly string[] = ['fragmentLink', 'subscript', 'superscript'];
+
+describe('markdown lossiness', () => {
+  it('loses only the allowlisted node and mark types', () => {
+    const { editor } = makeEditor({ content: EVERYTHING });
+    const before = typesIn(editor.getJSON());
+    const md = editor.getMarkdown();
+    editor.commands.setContent(md, { contentType: 'markdown' });
+    const after = typesIn(editor.getJSON());
+    editor.destroy();
+    const lost = [...before].filter((t) => !after.has(t)).sort();
+    expect(lost).toEqual([...MARKDOWN_LOSSY].sort());
   });
 });

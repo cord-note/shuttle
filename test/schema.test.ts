@@ -1,53 +1,8 @@
 import { describe, it, expect } from 'bun:test';
 import type { JSONContent } from '@tiptap/core';
+import { EVERYTHING, para, text } from './fixtures';
 import { makeEditor, sleep } from './helpers';
 import { BLOCK_TYPES } from '../src/extensions/blockTypes';
-
-const text = (t: string, marks?: JSONContent['marks']): JSONContent => ({ type: 'text', text: t, ...(marks ? { marks } : {}) });
-const para = (...content: JSONContent[]): JSONContent => ({ type: 'paragraph', content });
-
-const EVERYTHING: JSONContent = {
-  type: 'doc',
-  content: [
-    { type: 'heading', attrs: { level: 1 }, content: [text('Title')] },
-    para(
-      text('b', [{ type: 'bold' }]), text('i', [{ type: 'italic' }]), text('u', [{ type: 'underline' }]),
-      text('s', [{ type: 'strike' }]), text('c', [{ type: 'code' }]), text('h', [{ type: 'highlight' }]),
-      text('sub', [{ type: 'subscript' }]), text('sup', [{ type: 'superscript' }]),
-      text('link', [{ type: 'link', attrs: { href: 'https://example.com' } }]),
-      { type: 'inlineMath', attrs: { latex: 'x^2' } },
-      { type: 'mention', attrs: { id: 'n-alpha', label: 'Alpha', displayText: null, mentionSuggestionChar: '[[' } },
-      { type: 'fragmentLink', attrs: { linkId: 'l1', toNoteId: 'n-beta', toFragmentId: null, label: 'Beta' } },
-      { type: 'hardBreak' },
-    ),
-    { type: 'bulletList', content: [{ type: 'listItem', content: [para(text('a'))] }] },
-    { type: 'orderedList', content: [{ type: 'listItem', content: [para(text('1'))] }] },
-    { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: true }, content: [para(text('done'))] }] },
-    { type: 'blockquote', content: [para(text('q'))] },
-    { type: 'codeBlock', attrs: { language: 'ts' }, content: [text('const a = 1')] },
-    { type: 'blockMath', attrs: { latex: '\\int x' } },
-    { type: 'horizontalRule' },
-    { type: 'image', attrs: { src: 'attachment:abc', alt: 'pic' } },
-    { type: 'youtube', attrs: { src: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } },
-    { type: 'twitch', attrs: { src: 'https://www.twitch.tv/videos/1234567890' } },
-    {
-      type: 'table',
-      content: [
-        { type: 'tableRow', content: [{ type: 'tableHeader', content: [para(text('H'))] }] },
-        { type: 'tableRow', content: [{ type: 'tableCell', content: [para(text('C'))] }] },
-      ],
-    },
-    {
-      type: 'details',
-      content: [
-        { type: 'detailsSummary', content: [text('More')] },
-        { type: 'detailsContent', content: [para(text('hidden'))] },
-      ],
-    },
-    { type: 'blockRef', attrs: { refBlockId: 'b1', refNoteId: 'n-beta' } },
-    para(),
-  ],
-};
 
 describe('schema', () => {
   for (const mode of ['note', 'notepad'] as const) {
@@ -104,6 +59,54 @@ describe('schema', () => {
     const { editor } = makeEditor({ content: { type: 'doc', content: [{ type: 'horizontalRule' }] } });
     await sleep(0);
     expect(editor.state.doc.lastChild?.type.name).toBe('paragraph');
+    editor.destroy();
+  });
+});
+
+describe('blockId guard', () => {
+  const p = (id: string | null, t: string): JSONContent => ({ type: 'paragraph', attrs: { blockId: id }, content: [text(t)] });
+  const topIds = (doc: { forEach(f: (n: { attrs: Record<string, unknown> }) => void): void }): unknown[] => {
+    const ids: unknown[] = [];
+    doc.forEach((n) => ids.push(n.attrs['blockId']));
+    return ids;
+  };
+
+  it('keeps the first of two loaded duplicates and re-mints the second', () => {
+    const { editor } = makeEditor();
+    editor.commands.setContent({ type: 'doc', content: [p('D', 'a'), p('D', 'b')] }, { emitUpdate: false });
+    const ids = topIds(editor.state.doc);
+    expect(ids[0]).toBe('D');
+    expect(typeof ids[1]).toBe('string');
+    expect(ids[1]).not.toBe('D');
+    expect(new Set(ids).size).toBe(ids.length);
+    editor.destroy();
+  });
+
+  it('re-mints a programmatically inserted duplicate, leaving the original alone', async () => {
+    const { editor } = makeEditor({ content: { type: 'doc', content: [p('A', 'a')] } });
+    await sleep(0);
+    editor.commands.insertContentAt(editor.state.doc.content.size, p('A', 'b'));
+    const ids = topIds(editor.state.doc);
+    expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(editor.state.doc.firstChild?.attrs['blockId']).toBe('A');
+    expect(editor.state.doc.firstChild?.textContent).toBe('a');
+    editor.destroy();
+  });
+
+  it('gives id-less loaded blocks ids immediately, without waiting a tick', () => {
+    const { editor } = makeEditor();
+    editor.commands.setContent({ type: 'doc', content: [p(null, 'a'), p(null, 'b'), { type: 'horizontalRule' }, p(null, 'c')] }, { emitUpdate: false });
+    const ids = topIds(editor.state.doc);
+    expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+    editor.destroy();
+  });
+
+  it('keeps loaded unique ids exactly', () => {
+    const { editor } = makeEditor();
+    editor.commands.setContent({ type: 'doc', content: [p('x1', 'a'), p('x2', 'b'), p('x3', 'c')] }, { emitUpdate: false });
+    expect(topIds(editor.state.doc)).toEqual(['x1', 'x2', 'x3']);
     editor.destroy();
   });
 });
