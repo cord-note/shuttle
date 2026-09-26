@@ -16,6 +16,7 @@ import { Superscript } from '@tiptap/extension-superscript';
 import { FindAndReplace } from '@tiptap/extension-find-and-replace';
 import { TableOfContents, type TableOfContentData } from '@tiptap/extension-table-of-contents';
 import { Markdown } from '@tiptap/markdown';
+import { Marked, type marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { nanoid } from 'nanoid';
 
@@ -103,7 +104,15 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     Focus.configure({ className: 'sh-has-focus', mode: 'shallowest' }),
     FindAndReplace.configure({ searchDebounceMs: 0, injectCSS: false }),
     TableOfContents.configure(options.onOutline ? { onUpdate: options.onOutline } : {}),
-    Markdown.configure({ markedOptions: { gfm: true, breaks: false } }),
+    Markdown.configure({
+      // Without its own instance the extension registers every tokenizer on
+      // marked's module singleton, where they outlive this editor and leak into
+      // every editor built after it. The option is typed as the singleton
+      // (`typeof marked`), but the extension only uses the `use`, `setOptions`,
+      // `lexer`, `Lexer` and `defaults` members, which a `Marked` instance has.
+      marked: new Marked() as unknown as typeof marked,
+      markedOptions: { gfm: true, breaks: false },
+    }),
     MarkdownClipboard,
 
     // ── Custom ──────────────────────────────────────────────────────────────
