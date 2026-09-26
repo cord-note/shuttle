@@ -1,15 +1,14 @@
 import { Extension } from '@tiptap/core';
 import Suggestion from '@tiptap/suggestion';
-import { PluginKey } from '@tiptap/pm/state';
 import { createElement } from 'react';
 import type { ShuttleContextRef } from '../../context';
 import type { ShuttleMode } from '../../host';
 import { createSuggestionList } from '../../ui/SuggestionList';
 import { suggestionPopup } from '../../ui/suggestionPopup';
+import { slashPluginKey } from '../pluginKeys';
 import { filterSlashItems, type SlashItem } from './items';
 
-/** Exported so tests can check the menu opens after a programmatic `/`. */
-export const slashPluginKey = new PluginKey('slashCommand');
+export { slashPluginKey };
 
 const SlashList = createSuggestionList<SlashItem>({
   itemKey: (i) => i.title,

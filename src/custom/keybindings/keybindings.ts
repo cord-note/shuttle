@@ -4,8 +4,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type {} from '@tiptap/extension-highlight';
 import type { ShuttleContextRef } from '../../context';
 import type { ShuttleMode } from '../../host';
-import { slashPluginKey } from '../slash/slash';
-import { wikiLinkPluginKey } from '../links/wikiLink';
+import { slashPluginKey, wikiLinkPluginKey } from '../pluginKeys';
 import { SHUTTLE_KEYBINDINGS, eventToAccels, resolveBindings, type KeybindingDef, type KeybindingId } from './defs';
 
 /** Chords Tiptap itself relies on for non-catalogued behaviour; never swallowed. */

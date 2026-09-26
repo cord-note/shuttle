@@ -57,6 +57,10 @@ export interface ShuttleHost {
    * Every note title, for unlinked-mention highlighting. Called by a
    * decoration plugin on every document change, so it must be synchronous
    * and cheap — answer from an in-memory cache of the current vault.
+   * Return the same array instance until the titles change — Shuttle caches
+   * its matcher by array identity; after a change, return a new array and
+   * dispatch a transaction with `UNLINKED_REFRESH_META` (ShuttleEditor does
+   * this when the host prop changes).
    */
   listNoteTitles(): NoteRef[];
   /** Blocks of one note, for the second step of the reference picker. */

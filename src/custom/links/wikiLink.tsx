@@ -1,15 +1,15 @@
 import { InputRule, PasteRule, mergeAttributes, type JSONContent } from '@tiptap/core';
 import Mention from '@tiptap/extension-mention';
-import { PluginKey } from '@tiptap/pm/state';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import type { ShuttleContextRef } from '../../context';
 import type { NoteRef } from '../../host';
 import { createSuggestionList } from '../../ui/SuggestionList';
 import { suggestionPopup } from '../../ui/suggestionPopup';
+import { wikiLinkPluginKey } from '../pluginKeys';
 import WikiLinkView from './WikiLinkView';
 
+export { wikiLinkPluginKey };
 export const WIKI_TRIGGER = '[[';
-export const wikiLinkPluginKey = new PluginKey('wikiLinkSuggestion');
 
 const TYPED_LINK = /\[\[([^[\]|]+)(?:\|([^[\]]*))?\]\]$/;
 const MARKDOWN_LINK = /^\[\[([^[\]|]+)(?:\|([^[\]]*))?\]\]/;
