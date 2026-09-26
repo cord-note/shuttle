@@ -119,3 +119,15 @@ describe('shuttle.css block math alignment', () => {
     expect(css).toMatch(/\[data-align='left'\] \.katex-display > \.katex[^{]*\{[^}]*text-align:\s*left/);
   });
 });
+
+describe('shuttle.css stacked children in containers', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  it('spaces paragraphs inside toggle content and table cells', () => {
+    const rule = /\.sh-prose \.ProseMirror :is\(([^)]*(?:\([^)]*\)[^)]*)*)\) > \* \+ \* \{[^}]*margin-top:\s*0\.35em/.exec(css);
+    expect(rule).not.toBeNull();
+    const list = rule?.[1] ?? '';
+    expect(list).toContain("[data-type='detailsContent']");
+    expect(list).toMatch(/\btd\b/);
+    expect(list).toMatch(/\bth\b/);
+  });
+});

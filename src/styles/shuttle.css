@@ -45,8 +45,9 @@
 .sh-prose .ProseMirror > * + * { margin-top: 0.5em; }
 .sh-prose .ProseMirror > :is(h1, h2, h3):not(:first-child) { margin-top: 1em; }
 /* A task item's children are [label, div] side by side, so the stacked-children
-   gap applies inside its div instead of to the div itself. */
-.sh-prose .ProseMirror :is(li:not([data-checked]), blockquote, li[data-checked] > div) > * + * { margin-top: 0.35em; }
+   gap applies inside its div instead of to the div itself. Toggle (details)
+   content and table cells stack blocks the same way. */
+.sh-prose .ProseMirror :is(li:not([data-checked]), blockquote, li[data-checked] > div, [data-type='detailsContent'], td, th) > * + * { margin-top: 0.35em; }
 .sh-prose .ProseMirror :is(ul, ol) { padding-left: 1.5em; }
 .sh-prose .ProseMirror li + li { margin-top: 0.15em; }
 .sh-prose .ProseMirror p.is-editor-empty:first-child::before,
