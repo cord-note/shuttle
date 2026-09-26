@@ -2,7 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import type { ReactNode } from 'react';
 import {
-  List, ListOrdered, CheckSquare, Quote, Code2, Minus, Sigma, ImageIcon, Table, Highlighter,
+  List, ListOrdered, CheckSquare, Quote, Code, SquareCode, Minus, Sigma, ImageIcon, Table, Highlighter,
   Underline, Strikethrough, Subscript, Superscript,
 } from 'lucide-react';
 import type { ShuttleContextRef } from '../context';
@@ -63,7 +63,7 @@ export function Toolbar({ editor, ctx }: Props) {
       <Btn title={t('Italic', 'editor.italic')} active={s.italic} onRun={() => run().toggleItalic().run()}><em>I</em></Btn>
       <Btn title={t('Underline', 'editor.underline')} active={s.underline} onRun={() => run().toggleUnderline().run()}><Underline {...ic} /></Btn>
       <Btn title={t('Strikethrough', 'editor.strike')} active={s.strike} onRun={() => run().toggleStrike().run()}><Strikethrough {...ic} /></Btn>
-      <Btn title={t('Inline code', 'editor.inlineCode')} active={s.code} onRun={() => run().toggleCode().run()}>{'</>'}</Btn>
+      <Btn title={t('Inline code', 'editor.inlineCode')} active={s.code} onRun={() => run().toggleCode().run()}><Code {...ic} /></Btn>
       <Btn title={t('Highlight', 'editor.highlight')} active={s.highlight} onRun={() => run().toggleHighlight().run()}><Highlighter {...ic} /></Btn>
       <Btn title="Subscript" active={s.sub} onRun={() => run().toggleSubscript().run()}><Subscript {...ic} /></Btn>
       <Btn title="Superscript" active={s.sup} onRun={() => run().toggleSuperscript().run()}><Superscript {...ic} /></Btn>
@@ -76,7 +76,7 @@ export function Toolbar({ editor, ctx }: Props) {
       <Btn title={t('Ordered list', 'editor.orderedList')} active={s.ordered} onRun={() => run().toggleOrderedList().run()}><ListOrdered {...ic} /></Btn>
       <Btn title={t('Task list', 'editor.taskList')} active={s.task} onRun={() => run().toggleTaskList().run()}><CheckSquare {...ic} /></Btn>
       <Btn title={t('Quote', 'editor.blockquote')} active={s.quote} onRun={() => run().toggleBlockquote().run()}><Quote {...ic} /></Btn>
-      <Btn title={t('Code block', 'editor.codeBlock')} active={s.codeBlock} onRun={() => run().toggleCodeBlock().run()}><Code2 {...ic} /></Btn>
+      <Btn title={t('Code block', 'editor.codeBlock')} active={s.codeBlock} onRun={() => run().toggleCodeBlock().run()}><SquareCode {...ic} /></Btn>
       <span className="sh-tb-sep" />
       <Btn title={t('Divider', 'editor.divider')} onRun={() => run().setHorizontalRule().run()}><Minus {...ic} /></Btn>
       <Btn title="Table" onRun={() => run().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table {...ic} /></Btn>

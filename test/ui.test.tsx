@@ -60,6 +60,15 @@ describe('ui', () => {
     expect(editor().isActive('bold')).toBe(true);
   });
 
+  it('toolbar gives inline code and code block different icons', () => {
+    const { container } = mount('note');
+    const inline = container.querySelector('button[title^="Inline code"]') as HTMLButtonElement;
+    const block = container.querySelector('button[title^="Code block"]') as HTMLButtonElement;
+    expect(inline.textContent?.trim()).toBe('');
+    expect(inline.querySelector('svg.lucide-code')).toBeTruthy();
+    expect(block.querySelector('svg.lucide-square-code')).toBeTruthy();
+  });
+
   it('toolbar inline math button inserts an inlineMath node and opens the editor on it', () => {
     const { container, editor } = mount('note');
     act(() => { editor().commands.insertContent('ab'); });
