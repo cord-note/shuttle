@@ -34,7 +34,7 @@ export default function WikiLinkView({ node, updateAttributes, extension, editor
     requestAnimationFrame(() => input.current?.select());
   }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const close = (save: boolean): void => {
+  const close = (save: boolean, refocus: boolean): void => {
     if (done.current) return;
     done.current = true;
     if (save) {
@@ -42,7 +42,10 @@ export default function WikiLinkView({ node, updateAttributes, extension, editor
       updateAttributes({ displayText: next && next !== label ? next : null });
     }
     setEditing(false);
-    editor.commands.focus();
+    // Only return focus when closing via keyboard: a blur means the user
+    // clicked elsewhere (possibly outside the editor), and stealing focus
+    // back would fight that click.
+    if (refocus) editor.commands.focus();
   };
 
   return (
@@ -53,10 +56,10 @@ export default function WikiLinkView({ node, updateAttributes, extension, editor
           className="sh-wikilink-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => close(true)}
+          onBlur={() => close(true, false)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); close(true); }
-            if (e.key === 'Escape') { e.preventDefault(); close(false); }
+            if (e.key === 'Enter') { e.preventDefault(); close(true, true); }
+            if (e.key === 'Escape') { e.preventDefault(); close(false, true); }
           }}
         />
       ) : (
