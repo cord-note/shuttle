@@ -103,6 +103,17 @@ describe(':::details markdown', () => {
     expect(JSON.stringify(content)).toContain('some ::: text');
   });
 
+  it('treats ~~~ as a fence too, so a ::: line inside it does not close the details', () => {
+    const e = make();
+    e.commands.setContent(':::details S\n~~~\n:::\n~~~\n:::', { contentType: 'markdown' });
+    const outer = toJSON(e).content?.[0];
+    expect(outer?.type).toBe('details');
+    const content = outer?.content?.[1];
+    const childTypes = (content?.content ?? []).map((n) => n.type);
+    expect(childTypes).toEqual(['codeBlock']);
+    expect(content?.content?.[0]?.content?.map((n) => n.text).join('')).toBe(':::');
+  });
+
   it('parses marks in the summary and round-trips them', () => {
     const e = make();
     e.commands.setContent(':::details S **b**\nx\n:::', { contentType: 'markdown' });

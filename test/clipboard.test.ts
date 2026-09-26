@@ -3,6 +3,8 @@ import { Editor, type AnyExtension, type Content, type JSONContent } from '@tipt
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from '@tiptap/markdown';
 import { Fragment, Slice } from '@tiptap/pm/model';
+import { TableKit } from '@tiptap/extension-table';
+import { CellSelection } from '@tiptap/pm/tables';
 import { MarkdownClipboard } from '../src/custom/markdown/clipboard';
 
 let editor: Editor | null = null;
@@ -150,6 +152,32 @@ describe('markdown paste', () => {
     expect(types).toEqual(['heading', 'bulletList', 'paragraph']);
   });
 
+  it('inserts a pasted heading as its own block, not merged into the surrounding paragraph', () => {
+    const e = make('<p>ab</p>');
+    const start = startOfText(e, 'ab');
+    // caret between 'a' and 'b'
+    e.commands.setTextSelection(start + 1);
+    pasteMarkdown(e, '# Title');
+
+    const types = (toJSON(e).content ?? []).map((n) => n.type);
+    expect(types).toEqual(['paragraph', 'heading', 'paragraph']);
+    const heading = toJSON(e).content?.[1];
+    expect(heading?.content?.map((n) => n.text).join('')).toBe('Title');
+    // Never merged into a single paragraph like 'aTitleb'.
+    expect(JSON.stringify(toJSON(e))).not.toContain('aTitleb');
+  });
+
+  it('inserts a pasted fenced code block as a codeBlock, not merged inline', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    pasteMarkdown(e, '```js\nconst x = 1\n```');
+
+    const json = toJSON(e);
+    const codeBlock = json.content?.find((n) => n.type === 'codeBlock');
+    expect(codeBlock).toBeDefined();
+    expect(codeBlock?.content?.map((n) => n.text).join('')).toBe('const x = 1');
+  });
+
   it('is a single undo step', () => {
     const e = make('<p>one two</p>');
     const before = e.getJSON();
@@ -229,5 +257,52 @@ describe('markdown copy', () => {
     });
     const text = serialize(e, 0, e.state.doc.content.size);
     expect(text).toContain('# ');
+  });
+
+  it('copying two whole list items keeps their list markers', () => {
+    const e = make({
+      type: 'doc',
+      content: [
+        {
+          type: 'bulletList',
+          content: [
+            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'one' }] }] },
+            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'two' }] }] },
+          ],
+        },
+      ],
+    });
+    const text = serialize(e, 0, e.state.doc.content.size);
+    expect(text).toContain('- ');
+    expect(text).toContain('one');
+    expect(text).toContain('two');
+  });
+
+  it('copying a table CellSelection renders a markdown table', () => {
+    const e = make(
+      `<table><tbody>
+        <tr><td>a1</td><td>a2</td></tr>
+        <tr><td>b1</td><td>b2</td></tr>
+      </tbody></table>`,
+      [TableKit],
+    );
+    const cellPositions: number[] = [];
+    e.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'tableCell') cellPositions.push(pos);
+    });
+    // Corner-to-corner selection covering all four cells. CellSelection's
+    // anchor/head must resolve at the row's depth (the position right
+    // before the cell), not one level deeper inside the cell's own content.
+    const anchorCellPos = cellPositions[0];
+    const headCellPos = cellPositions[3];
+    if (anchorCellPos === undefined || headCellPos === undefined) throw new Error('expected 4 table cells');
+    const selection = CellSelection.create(e.state.doc, anchorCellPos, headCellPos);
+    e.view.dispatch(e.state.tr.setSelection(selection));
+
+    const slice = e.state.selection.content();
+    const result = e.view.someProp('clipboardTextSerializer', (f) => f(slice, e.view));
+    expect(result).toContain('|');
+    expect(result).toContain('a1');
+    expect(result).toContain('b2');
   });
 });

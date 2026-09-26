@@ -9,6 +9,13 @@ const FIRST_LINE = /^:::details\b[ \t]*([^\n]*)(\n|$)/;
  * outer block early, and ignoring `:::`-shaped lines inside fenced code
  * blocks. Returns `undefined` when the block is never closed.
  */
+// A fenced-code-block delimiter: up to 3 leading spaces then 3+ backticks or
+// tildes. Checked against the UNtrimmed line, so a 4-space-indented fence
+// (itself just an indented code block in commonmark, not a fence) doesn't
+// toggle fence state, and lines inside the fence — including ':::'-shaped
+// ones — are never mistaken for details markers.
+const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
+
 function scanDetailsBlock(src: string): { raw: string; summary: string; bodySrc: string } | undefined {
   const first = FIRST_LINE.exec(src);
   if (!first) return undefined;
@@ -22,12 +29,13 @@ function scanDetailsBlock(src: string): { raw: string; summary: string; bodySrc:
   while (pos <= src.length) {
     const nlIndex = src.indexOf('\n', pos);
     const lineEnd = nlIndex === -1 ? src.length : nlIndex;
-    const line = src.slice(pos, lineEnd).trim();
+    const rawLine = src.slice(pos, lineEnd);
+    const line = rawLine.trim();
 
-    if (!inFence && line.startsWith('```')) {
+    if (!inFence && FENCE_LINE.test(rawLine)) {
       inFence = true;
     } else if (inFence) {
-      if (line.startsWith('```')) inFence = false;
+      if (FENCE_LINE.test(rawLine)) inFence = false;
     } else if (/^:::details\b/.test(line)) {
       depth += 1;
     } else if (line === ':::') {

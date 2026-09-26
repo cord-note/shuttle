@@ -66,10 +66,13 @@ export const MarkdownClipboard = Extension.create({
               if (!json) return null as unknown as Slice;
               const doc = view.state.schema.nodeFromJSON(json);
               const onlyChild = doc.childCount === 1 ? doc.firstChild : null;
-              if (onlyChild && onlyChild.isTextblock) {
-                // A single textblock (e.g. one paragraph of inline markdown)
+              const paragraphType = view.state.schema.nodes['paragraph'];
+              if (onlyChild && paragraphType && onlyChild.type === paragraphType) {
+                // A single plain paragraph (e.g. one line of inline markdown)
                 // is inserted inline at the caret rather than as a sibling
-                // block.
+                // block. Any OTHER single block — heading, codeBlock,
+                // blockquote — keeps its own type rather than being merged
+                // into the surrounding paragraph's inline content.
                 return Slice.maxOpen(doc.content);
               }
               return new Slice(doc.content, 0, 0);
@@ -79,17 +82,15 @@ export const MarkdownClipboard = Extension.create({
           },
           clipboardTextSerializer(slice, view) {
             try {
-              // A copy that is a single (possibly nested) textblock — a
-              // partial-word selection, a line inside a code block — is
-              // copied verbatim rather than escaped into markdown syntax.
-              // Only a copy spanning multiple top-level blocks is worth
-              // rendering as markdown.
-              const isSingleTextblock = slice.content.childCount === 1 && slice.openStart > 0;
-              const isInCode = (() => {
-                const $from = view.state.selection.$from;
-                return Boolean($from.parent.type.spec.code) || $from.marks().some((m) => m.type.spec.code);
-              })();
-              if (isSingleTextblock || isInCode) {
+              // Decide from the selection, not the slice's shape: a
+              // selection that starts and ends in the same textblock parent
+              // (a partial-word selection, a line inside a code block) is
+              // copied verbatim. Anything else — including a selection
+              // spanning several blocks, or a CellSelection over a table,
+              // which has no single textblock parent at all — is rendered as
+              // markdown so list markers and table pipes survive the copy.
+              const { $from, $to } = view.state.selection;
+              if ($from.sameParent($to) && $from.parent.isTextblock) {
                 return slice.content.textBetween(0, slice.content.size, '\n\n');
               }
               const manager = editor.markdown;
