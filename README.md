@@ -26,7 +26,7 @@ import '@cord/shuttle/styles.css';
 | Prop | Behaviour |
 |---|---|
 | `docKey` | Identity of the document. `doc` is read only when this changes; the editor owns the content after that. Changing it flushes any pending debounced edit first. |
-| `doc` | The stored document. A document that fails schema validation opens read-only and is never passed to `onChange`. |
+| `doc` | The stored document. A document that fails schema validation (a legacy note) is shown as read-only plain text, never saved — it is never passed to `onChange`. |
 | `mode` | `'note'` (plain document) or `'notepad'` (adds the block gutter and block menu); both share one schema. |
 | `host` | Implements `ShuttleHost`. Pass a **new** host object when the note list changes — Shuttle refreshes views derived from it (unlinked-mention decorations) on identity change, not on a deep diff. |
 | `onChange` | Debounced save (`saveDebounceMs`, default 750 ms). Also flushed immediately on `docKey` change and on unmount, so an edit inside the debounce window is never dropped. |
@@ -54,6 +54,11 @@ the embedding application goes through one interface, `ShuttleHost` (`src/host.t
   `onFragmentAction`, `openNote`, `log` (structured; Shuttle never calls `console`).
 - **Settings** — `keybindings`, the user's overrides of Shuttle's defaults.
 
+Shuttle catches exceptions from every host method, sync or async (`guardHost`), logs
+them through `log`, and degrades the affected feature: a throwing lookup answers
+"nothing found", a throwing side-effect callback is skipped, and the save is always
+scheduled before any callback runs.
+
 `findNoteByTitle` and `listNoteTitles` **must be synchronous** — they're called from
 input rules, markdown parsing and a decoration plugin that runs on every document
 change, so both should answer from an in-memory cache rather than a query.
@@ -80,9 +85,11 @@ are excluded until they resolve to a real `src`.
 ## What is official, what is custom
 
 **Official Tiptap 3, configured:** StarterKit (Document, Paragraph, Text, Heading,
-Blockquote, BulletList, OrderedList, ListItem, Link, Underline, ListKeymap,
-TrailingNode, UndoRedo, its own CodeBlock disabled) · CodeBlockLowlight · TaskList /
-TaskItem · Mathematics · Mention · Image · Youtube · Twitch · FileHandler · UniqueID ·
+Blockquote, BulletList, OrderedList, ListItem, ListKeymap, HorizontalRule, HardBreak,
+Bold, Italic, Code, Strike, Underline, Link, Dropcursor, Gapcursor, UndoRedo,
+TrailingNode; its own CodeBlock disabled in favour of CodeBlockLowlight) ·
+CodeBlockLowlight · TaskList / TaskItem · Mathematics (including its `$…$` / `$$…$$`
+markdown tokenizers) · Mention · Image · Youtube · Twitch · FileHandler · UniqueID ·
 DragHandleReact · Placeholder · CharacterCount · BubbleMenu · Selection · Focus ·
 TableKit · Details (+ summary, content) · Highlight · Subscript · Superscript ·
 FindAndReplace · TableOfContents · `@tiptap/markdown`.
@@ -99,7 +106,7 @@ FindAndReplace · TableOfContents · `@tiptap/markdown`.
 | Slash menu | Official `Suggestion` plugin plus Shuttle's own item list and React list |
 | Keybindings | Priority-1000 plugin with Shuttle's defaults, rebindable by the host, with physical-key fallback |
 | Unlinked mentions | Decoration plugin fed by `host.listNoteTitles()` |
-| Markdown glue | Tokenizers for `[[…]]`, `$…$`/`$$…$$`, `:::details`, `![[note#block]]`, and the markdown clipboard (parses plain-text pastes that look like markdown; serializes multi-block copies back to markdown) |
+| Markdown glue | Tokenizers for `[[…]]`, `:::details`, `![[note#block]]`, and the markdown clipboard (parses plain-text pastes that look like markdown; serializes multi-block copies back to markdown) |
 | Image upload glue | Drop/paste handling into `host.uploadFile`, with pending uploads excluded from what's saved |
 
 **Deliberately not used:** the TextStyle kit, Color/BackgroundColor, FontFamily,

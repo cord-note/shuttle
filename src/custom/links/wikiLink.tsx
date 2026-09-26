@@ -144,6 +144,7 @@ export function wikiLink(ctx: ShuttleContextRef, view: ViewOptions) {
         .filter((n) => n.id !== ctx.current.docKey)
         .slice(0, 8),
       command: ({ editor, range, props }) => {
+        // Suggestion types `props` as the Mention node's attrs, but our `items` are NoteRefs.
         const note = props as unknown as NoteRef;
         // Swallow an existing space after the query so the link is followed by exactly one.
         const after = editor.state.doc.textBetween(range.to, Math.min(range.to + 1, editor.state.doc.content.size));
