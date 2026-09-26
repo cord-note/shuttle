@@ -9,7 +9,10 @@
  * highlighters on web pages mark code), ProseMirror's HTML parse stands. If
  * it is only a rendering of plain text (VS Code's styled div/span lines, a
  * bare `<pre>` from Notepad++ and similar editors), the text/plain side is
- * converted as markdown instead. Shift+paste always pastes literal text.
+ * converted as markdown instead. HTML copied from a ProseMirror editor
+ * (`data-pm-slice`) always counts as structured, so internal copy/paste is
+ * exact. VS Code code in a language other than markdown is left to the code
+ * block's VS Code handler. Shift+paste always pastes literal text.
  */
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -43,8 +46,14 @@ export function looksLikeMarkdown(text: string): boolean {
 }
 
 /** Elements that mean the HTML is a real rich-text document, not a rendering of plain text. */
-const STRUCTURE_SELECTOR =
-  'h1,h2,h3,h4,h5,h6,ul,ol,li,table,blockquote,img,a[href],hr,code,strong,em,i,u,s,[class]';
+const STRUCTURE_SELECTOR = [
+  'h1,h2,h3,h4,h5,h6,ul,ol,li,table,blockquote,img,a[href],hr',
+  'code,strong,em,i,u,s,sub,sup,mark,del,strike,ins',
+  // Syntax highlighters on web pages, and custom nodes' markup.
+  '[class],[data-type]',
+  // Copied from a ProseMirror editor (this one included): its HTML is exact.
+  '[data-pm-slice]',
+].join(',');
 
 /**
  * Whether clipboard HTML carries structure worth keeping. Code editors put a
@@ -52,8 +61,10 @@ const STRUCTURE_SELECTOR =
  * inline `style`, or a bare `<pre>`); that has no structure, and its
  * text/plain side is the markdown the user copied. Any `class` attribute
  * counts as structure because syntax highlighters on web pages use classes,
- * and a snippet copied from GitHub or StackOverflow must stay code. Google
- * Docs wraps everything in `<b id="docs-internal-guid-...">`, which is not bold.
+ * and a snippet copied from GitHub or StackOverflow must stay code. HTML
+ * copied from a ProseMirror editor (`data-pm-slice`) is always authoritative,
+ * so an internal copy/paste keeps every mark and attribute. Google Docs wraps
+ * everything in `<b id="docs-internal-guid-...">`, which is not bold.
  */
 export function htmlHasStructure(html: string): boolean {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -62,11 +73,15 @@ export function htmlHasStructure(html: string): boolean {
 }
 
 /**
- * The slice a markdown paste inserts, shared by the text-only and HTML paths
- * so both agree. A single plain paragraph (e.g. one line of inline markdown)
- * is inserted inline at the caret rather than as a sibling block; any other
- * content — including a single heading, codeBlock or blockquote — keeps its
- * own block type. Null when the text cannot be parsed.
+ * The slice a markdown paste inserts, built the same way for the text-only
+ * and HTML paths. A single plain paragraph (e.g. one line of inline markdown)
+ * becomes an open slice so it merges into the paragraph at the caret; any
+ * other content — including a single heading, codeBlock or blockquote — is a
+ * closed slice that keeps its own block types. The two paths insert it
+ * differently: the text-only path returns it to ProseMirror's `doPaste`,
+ * which inserts a closed single-node slice with `replaceSelectionWith`, while
+ * the HTML path dispatches `replaceSelection` itself. Null when the text
+ * cannot be parsed.
  */
 export function markdownSlice(text: string, view: EditorView, editor: Editor): Slice | null {
   try {
@@ -77,6 +92,19 @@ export function markdownSlice(text: string, view: EditorView, editor: Editor): S
     const paragraphType = view.state.schema.nodes['paragraph'];
     if (onlyChild && paragraphType && onlyChild.type === paragraphType) return Slice.maxOpen(doc.content);
     return new Slice(doc.content, 0, 0);
+  } catch {
+    return null;
+  }
+}
+
+/** The `mode` (language) VS Code puts in its `vscode-editor-data` clipboard entry, or null. */
+function vscodeEditorMode(raw: string): string | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const mode = (parsed as { mode?: unknown }).mode;
+    return typeof mode === 'string' && mode ? mode : null;
   } catch {
     return null;
   }
@@ -123,6 +151,15 @@ export const MarkdownClipboard = Extension.create({
             if ($context.marks().some((m) => m.type.spec.code)) return null as unknown as Slice;
             return markdownSlice(text, view, editor) ?? (null as unknown as Slice);
           },
+          handleDOMEvents: {
+            // Runs before ProseMirror's own paste handling, so a flag left by a
+            // Shift+paste that another plugin's `handlePaste` took over never
+            // leaks into the next paste.
+            paste: () => {
+              plainParse = false;
+              return false;
+            },
+          },
           handlePaste(view, event) {
             // Runs after ProseMirror has parsed the clipboard; only the case
             // where it chose unstructured HTML over markdown text is taken over.
@@ -134,6 +171,10 @@ export const MarkdownClipboard = Extension.create({
             const html = data.getData('text/html');
             if (!html) return false;
             if (data.files.length > 0) return false;
+            // VS Code code in any language but markdown belongs to the code
+            // block's own VS Code handler, which keeps the language.
+            const vscodeMode = vscodeEditorMode(data.getData('vscode-editor-data'));
+            if (vscodeMode !== null && vscodeMode !== 'markdown') return false;
             const { $from } = view.state.selection;
             if ($from.parent.type.spec.code) return false;
             if ($from.marks().some((m) => m.type.spec.code)) return false;

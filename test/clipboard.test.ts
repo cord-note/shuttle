@@ -6,6 +6,7 @@ import { Fragment, Slice } from '@tiptap/pm/model';
 import { TableKit } from '@tiptap/extension-table';
 import { CellSelection } from '@tiptap/pm/tables';
 import { MarkdownClipboard, htmlHasStructure, markdownClipboardKey } from '../src/custom/markdown/clipboard';
+import { makeEditor } from './helpers';
 
 let editor: Editor | null = null;
 afterEach(() => { editor?.destroy(); editor = null; });
@@ -422,5 +423,110 @@ describe('Shift+paste with an HTML clipboard', () => {
     const types = (e.getJSON().content ?? []).map((n) => n.type);
     expect(types.every((t) => t === 'paragraph')).toBe(true);
     expect(JSON.stringify(e.getJSON())).toContain('# Title');
+  });
+});
+
+describe('paste in the full editor', () => {
+  let full: Editor | null = null;
+  afterEach(() => { full?.destroy(); full = null; });
+
+  const VSCODE_LINES = (lines: string[]): string =>
+    '<meta charset="utf-8"><div style="color: #cccccc;background-color: #1f1f1f;white-space: pre;">' +
+    lines.map((l) => (l ? `<div><span style="color: #cccccc;">${l}</span></div>` : '<br>')).join('') +
+    '</div>';
+
+  function paste(e: Editor, data: Record<string, string>, shift = false): void {
+    const dt = new DataTransfer();
+    for (const [type, value] of Object.entries(data)) dt.setData(type, value);
+    if (shift) e.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', keyCode: 16, shiftKey: true, bubbles: true }));
+    e.view.dom.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    if (shift) e.view.dom.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift', keyCode: 16, bubbles: true }));
+  }
+
+  const types = (e: Editor): (string | undefined)[] => (toJSON(e).content ?? []).map((n) => n.type);
+
+  it('leaves VS Code code in another language to the code block handler', () => {
+    ({ editor: full } = makeEditor());
+    full.commands.setTextSelection(1);
+    const text = '# compute\ndef f():\n  return 1';
+    paste(full, {
+      'text/plain': text,
+      'text/html': VSCODE_LINES(['# compute', 'def f():', '  return 1']),
+      'vscode-editor-data': JSON.stringify({ version: 1, isFromEmptySelection: false, mode: 'python' }),
+    });
+    const code = toJSON(full).content?.find((n) => n.type === 'codeBlock');
+    expect(code?.attrs?.['language']).toBe('python');
+    expect(code?.content?.map((n) => n.text).join('')).toBe(text);
+    expect(types(full)).not.toContain('heading');
+  });
+
+  it('converts VS Code markdown', () => {
+    ({ editor: full } = makeEditor());
+    full.commands.setTextSelection(1);
+    paste(full, {
+      'text/plain': '# Title\n\n- one\n- two',
+      'text/html': VSCODE_LINES(['# Title', '', '- one', '- two']),
+      'vscode-editor-data': JSON.stringify({ version: 1, isFromEmptySelection: false, mode: 'markdown' }),
+    });
+    expect(types(full).slice(0, 2)).toEqual(['heading', 'bulletList']);
+  });
+
+  it('keeps an internal copy intact (marks and block math alignment)', () => {
+    ({ editor: full } = makeEditor({
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'text', text: 'H' },
+              { type: 'text', text: '2', marks: [{ type: 'subscript' }] },
+              { type: 'text', text: ' and ' },
+              { type: 'text', text: 'lit', marks: [{ type: 'highlight' }] },
+            ],
+          },
+          { type: 'blockMath', attrs: { latex: 'x', align: 'left' } },
+          { type: 'paragraph' },
+        ],
+      },
+    }));
+    const e = full;
+    const mathEnd = (e.state.doc.child(0).nodeSize) + (e.state.doc.child(1).nodeSize);
+    e.commands.setTextSelection({ from: 1, to: mathEnd });
+    const { dom, text } = e.view.serializeForClipboard(e.state.selection.content());
+    // Paste into the trailing empty paragraph.
+    e.commands.setTextSelection(e.state.doc.content.size - 1);
+    paste(e, { 'text/plain': text, 'text/html': dom.innerHTML });
+
+    let subs = 0;
+    const aligns: unknown[] = [];
+    e.state.doc.descendants((n) => {
+      if (n.isText && n.marks.some((m) => m.type.name === 'subscript')) subs += 1;
+      if (n.type.name === 'blockMath') aligns.push(n.attrs['align']);
+    });
+    expect(subs).toBe(2);
+    expect(aligns).toEqual(['left', 'left']);
+  });
+
+  it('a Shift+paste handled by another plugin does not leave a stale plain flag', () => {
+    ({ editor: full } = makeEditor({ content: '<p>word</p>' }));
+    full.commands.setTextSelection({ from: 1, to: 5 });
+    paste(full, { 'text/plain': 'https://example.com' }, true);
+    expect(JSON.stringify(full.getJSON())).toContain('https://example.com');
+    full.commands.setTextSelection(full.state.doc.content.size - 1);
+    paste(full, { 'text/plain': '# Title\n\n- one', 'text/html': VSCODE_LINES(['# Title', '', '- one']) });
+    expect(types(full)).toContain('heading');
+    expect(types(full)).toContain('bulletList');
+  });
+});
+
+describe('htmlHasStructure (ProseMirror-origin markup)', () => {
+  it('treats ProseMirror slices and extra marks as structure', () => {
+    for (const html of [
+      '<p data-pm-slice="1 1 []">a</p>', '<sub>2</sub>', '<sup>2</sup>', '<mark>x</mark>',
+      '<del>x</del>', '<strike>x</strike>', '<ins>x</ins>', '<div data-type="block-math"></div>',
+    ]) {
+      expect(htmlHasStructure(html)).toBe(true);
+    }
   });
 });
