@@ -12,16 +12,16 @@
     "wiki-links",
     "katex"
   ],
-  "homepage": "https://github.com/Alexander-288/shuttle#readme",
+  "homepage": "https://github.com/cord-note/shuttle#readme",
   "bugs": {
-    "url": "https://github.com/Alexander-288/shuttle/issues"
+    "url": "https://github.com/cord-note/shuttle/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Alexander-288/shuttle.git"
+    "url": "git+https://github.com/cord-note/shuttle.git"
   },
   "license": "AGPL-3.0-or-later",
-  "author": "alexander-288",
+  "author": "Aleksander Sprengel",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",

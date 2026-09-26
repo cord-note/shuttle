@@ -4,7 +4,7 @@ A React rich-text editor for note-taking apps, built on official Tiptap 3.
 
 [![npm](https://img.shields.io/npm/v/shuttle-editor)](https://www.npmjs.com/package/shuttle-editor)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](./LICENSE)
-[![CI](https://github.com/Alexander-288/shuttle/actions/workflows/ci.yml/badge.svg)](https://github.com/Alexander-288/shuttle/actions/workflows/ci.yml)
+[![CI](https://github.com/cord-note/shuttle/actions/workflows/ci.yml/badge.svg)](https://github.com/cord-note/shuttle/actions/workflows/ci.yml)
 
 ## What it is
 
@@ -42,17 +42,17 @@ yarn add shuttle-editor react react-dom katex
 
 React 18 or 19 and KaTeX 0.16 are peer dependencies. The package is ESM-only.
 
-The same package is also published to GitHub Packages as `@alexander-288/shuttle`.
+The same package is also published to GitHub Packages as `@cord-note/shuttle`.
 To install from there, add this to your project's `.npmrc`:
 
 ```ini
-@alexander-288:registry=https://npm.pkg.github.com
+@cord-note:registry=https://npm.pkg.github.com
 ```
 
 and authenticate with a GitHub token that has the `read:packages` scope (GitHub
 Packages requires a token even for public packages). Then
-`npm install @alexander-288/shuttle` and import from `@alexander-288/shuttle` instead of
-`shuttle-editor` — including the stylesheet, `import '@alexander-288/shuttle/styles.css'`.
+`npm install @cord-note/shuttle` and import from `@cord-note/shuttle` instead of
+`shuttle-editor` — including the stylesheet, `import '@cord-note/shuttle/styles.css'`.
 
 ## Quick start
 
@@ -313,7 +313,7 @@ The repository uses pnpm 11 (pinned in `package.json`); `corepack enable` instal
 right version for you.
 
 ```bash
-git clone https://github.com/Alexander-288/shuttle.git
+git clone https://github.com/cord-note/shuttle.git
 cd shuttle
 corepack enable
 pnpm install

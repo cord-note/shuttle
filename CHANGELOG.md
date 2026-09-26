@@ -3,7 +3,7 @@
 ## 0.1.0
 
 First public release, published to npm as `shuttle-editor` and to GitHub Packages as
-`@alexander-288/shuttle`.
+`@cord-note/shuttle`.
 
 Shuttle is rebuilt on official Tiptap 3 extensions. This release includes:
 

@@ -92,19 +92,19 @@ jobs:
           node-version: 22
           cache: pnpm
           registry-url: https://npm.pkg.github.com
-          scope: '@alexander-288'
+          scope: '@cord-note'
       - run: pnpm install --frozen-lockfile
       # GitHub Packages only accepts npm packages scoped to the repository
-      # owner, so the same build is published there as @alexander-288/shuttle.
+      # owner, so the same build is published there as @cord-note/shuttle.
       # The rename happens only in this job's checkout and is never committed.
-      - run: npm pkg set name=@alexander-288/shuttle
+      - run: npm pkg set name=@cord-note/shuttle
       # GitHub Packages needs auth even for `npm view`; the .npmrc lines give
       # both the lookup and the publish the scope's registry and the token.
       - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "@alexander-288:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "@cord-note:registry=https://npm.pkg.github.com/" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
           NAME="$(node -p "require('./package.json').name")"
           VERSION="$(node -p "require('./package.json').version")"
