@@ -15,10 +15,13 @@ export function shuttleImage(ctx: ShuttleContextRef) {
         ...this.parent?.(),
         src: {
           default: null,
-          parseHTML: (el: HTMLElement) => el.getAttribute('src'),
+          // `data-src` carries the platform-neutral stored value through an
+          // HTML copy/paste round trip; `src` alone would leak the resolved
+          // (host-specific) URL back in as the stored value.
+          parseHTML: (el: HTMLElement) => el.getAttribute('data-src') ?? el.getAttribute('src'),
           renderHTML: (attrs: Record<string, unknown>) => {
             const src = attrs['src'] as string | null;
-            return src ? { src: ctx.current.host.resolveFileSrc(src) } : {};
+            return src ? { src: ctx.current.host.resolveFileSrc(src), 'data-src': src } : {};
           },
         },
         uploadId: { default: null, rendered: false },
@@ -31,6 +34,7 @@ export function shuttleImage(ctx: ShuttleContextRef) {
 
     addProseMirrorPlugins() {
       const editor = this.editor;
+      const name = this.name;
       return [
         ...(this.parent?.() ?? []),
         new Plugin({
@@ -38,7 +42,7 @@ export function shuttleImage(ctx: ShuttleContextRef) {
           props: {
             handleClickOn(_view, _pos, node) {
               const uploadId = node.attrs['uploadId'] as string | null;
-              if (node.type.name !== 'image' || !node.attrs['uploadError'] || !uploadId) return false;
+              if (node.type.name !== name || !node.attrs['uploadError'] || !uploadId) return false;
               retryUpload(editor, ctx, uploadId);
               return true;
             },
