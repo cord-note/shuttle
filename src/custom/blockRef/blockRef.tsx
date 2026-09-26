@@ -66,8 +66,8 @@ export function blockRef(ctx: ShuttleContextRef, view: ViewOptions) {
       // 3 spaces) can begin a transclusion — mid-paragraph text is never
       // interrupted by it.
       start: (src: string) => {
-        const m = /(^|\n) {0,3}!\[\[/.exec(src);
-        return m ? m.index + (m[1]?.length ?? 0) : -1;
+        const i = src.search(/\n {0,3}!\[\[/);
+        return i < 0 ? -1 : i + 1;
       },
       tokenize: (src: string) => {
         const m = MARKDOWN_REF.exec(src);

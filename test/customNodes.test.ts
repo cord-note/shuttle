@@ -190,4 +190,17 @@ describe('blockRef markdown', () => {
     expect(refs).toEqual([{ refNoteId: 'N_1-x', refBlockId: 'Ab_c-9' }]);
     expect(e.getMarkdown()).toContain('![[N_1-x#Ab_c-9]]');
   });
+
+  it('does not cut a paragraph starting with a one-character word before ![[..]]', () => {
+    const e = makeWith('<p></p>', [Markdown]);
+    e.commands.setContent('a ![[n#b]]', { contentType: 'markdown' });
+
+    expect(e.state.doc.childCount).toBe(1);
+    expect(e.state.doc.child(0).type.name).toBe('paragraph');
+    expect(e.state.doc.child(0).textContent).toBe('a ![[n#b]]');
+
+    let refs = 0;
+    e.state.doc.descendants((n) => { if (n.type.name === 'blockRef') refs += 1; });
+    expect(refs).toBe(0);
+  });
 });
