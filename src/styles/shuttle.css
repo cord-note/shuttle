@@ -1,0 +1,153 @@
+/*
+ * Shuttle's stylesheet. Colours read host variables first (Cord's --accent,
+ * --bg-*, --text-*), then fall back to neutral defaults, so the package looks
+ * right in Cord and standalone.
+ */
+@import 'katex/dist/katex.min.css';
+
+.sh-root {
+  --sh-accent: var(--accent, #7aa2f7);
+  --sh-bg: var(--bg-primary, #ffffff);
+  --sh-bg-raised: var(--bg-secondary, #f5f5f7);
+  --sh-border: var(--border, #e3e3e8);
+  --sh-text: var(--text-primary, #1d1d22);
+  --sh-muted: var(--text-muted, #8a8a94);
+  --sh-link: var(--link-color, var(--sh-accent));
+  --sh-radius: 6px;
+  --sh-font-size: var(--editor-font-size, 15px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  color: var(--sh-text);
+  font-size: var(--sh-font-size);
+}
+
+/* Mode variants — `sh-mode-note` is the plain single-document mode and needs
+   no layout changes of its own; `sh-mode-notepad` shifts content over to make
+   room for the block gutter (see `.sh-mode-notepad .sh-content` below). */
+.sh-mode-note { /* intentionally empty: no mode-specific overrides yet */ }
+
+/* ── Content ─────────────────────────────────────────────────────────────── */
+.sh-content { position: relative; flex: 1; }
+.sh-mode-notepad .sh-content { padding-left: 44px; }
+.sh-prose .ProseMirror { outline: none; line-height: 1.65; padding: 8px 0 40vh; }
+.sh-prose .ProseMirror > * + * { margin-top: 0.5em; }
+.sh-prose .ProseMirror p.is-editor-empty:first-child::before,
+.sh-prose .ProseMirror .is-empty::before {
+  content: attr(data-placeholder); color: var(--sh-muted); float: left; height: 0; pointer-events: none;
+}
+.sh-prose h1 { font-size: 1.8em; font-weight: 700; }
+.sh-prose h2 { font-size: 1.4em; font-weight: 650; }
+.sh-prose h3 { font-size: 1.15em; font-weight: 600; }
+.sh-prose blockquote { border-left: 3px solid var(--sh-border); padding-left: 12px; color: var(--sh-muted); }
+.sh-prose code { background: var(--sh-bg-raised); border-radius: 4px; padding: 0.1em 0.35em; font-size: 0.9em; }
+.sh-prose pre { background: var(--sh-bg-raised); border-radius: var(--sh-radius); padding: 10px 12px; overflow-x: auto; }
+.sh-prose pre code { background: none; padding: 0; }
+.sh-prose mark { background: color-mix(in srgb, var(--sh-accent) 30%, transparent); color: inherit; border-radius: 2px; }
+.sh-prose a { color: var(--sh-link); text-decoration: underline; text-underline-offset: 2px; }
+.sh-prose hr { border: none; border-top: 1px solid var(--sh-border); margin: 1em 0; }
+.sh-prose img { max-width: 100%; border-radius: var(--sh-radius); }
+.sh-prose img[data-upload-error] { outline: 2px dashed #e5484d; cursor: pointer; opacity: 0.6; }
+.sh-prose iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: var(--sh-radius); }
+.sh-prose table { border-collapse: collapse; width: 100%; }
+.sh-prose th, .sh-prose td { border: 1px solid var(--sh-border); padding: 4px 8px; vertical-align: top; }
+.sh-prose th { background: var(--sh-bg-raised); font-weight: 600; }
+.sh-prose .selectedCell { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+.sh-prose ul[data-type='taskList'] { list-style: none; padding-left: 4px; }
+.sh-prose ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
+.sh-prose ul[data-type='taskList'] input[type='checkbox'] { accent-color: var(--sh-accent); margin-top: 0.35em; }
+.sh-prose ul[data-type='taskList'] li[data-checked='true'] > div { color: var(--sh-muted); text-decoration: line-through; }
+.sh-prose .sh-details { border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 6px 10px; }
+.sh-prose .sh-has-focus { border-radius: 4px; }
+.sh-mode-notepad .sh-prose .sh-has-focus { box-shadow: -3px 0 0 color-mix(in srgb, var(--sh-accent) 45%, transparent); }
+.sh-prose .unlinked-mention { text-decoration: underline dotted var(--sh-muted); text-underline-offset: 3px; }
+.sh-prose .find-and-replace-result { background: color-mix(in srgb, #f5c542 45%, transparent); }
+.sh-prose .find-and-replace-result-current { background: #f5c542; }
+.sh-prose .tiptap-mathematics-render { cursor: pointer; }
+
+/* ── Links and references ────────────────────────────────────────────────── */
+.sh-wikilink, .sh-fragment-link { color: var(--sh-link); cursor: pointer; }
+.sh-wikilink-label, .sh-fragment-link span { color: var(--sh-link); cursor: pointer; border-radius: 3px; }
+.sh-wikilink-label:hover, .sh-fragment-link span:hover { background: color-mix(in srgb, var(--sh-accent) 12%, transparent); }
+.sh-wikilink-input { font: inherit; border: 1px solid var(--sh-accent); border-radius: 3px; padding: 0 3px; }
+.sh-blockref { display: block; border-left: 3px solid var(--sh-accent); background: var(--sh-bg-raised); border-radius: var(--sh-radius); padding: 6px 10px; }
+.sh-blockref.is-missing { border-left-color: var(--sh-muted); }
+.sh-blockref-source { display: inline-flex; gap: 4px; align-items: center; font-size: 0.8em; color: var(--sh-muted); background: none; border: 0; cursor: pointer; padding: 0; }
+.sh-blockref-status { display: flex; gap: 6px; align-items: center; color: var(--sh-muted); font-size: 0.85em; }
+.sh-blockref-body { margin-top: 4px; }
+
+/* ── Chrome ─────────────────────────────────────────────────────────────── */
+.sh-legacy { background: var(--sh-bg-raised); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 8px 12px; color: var(--sh-muted); margin-bottom: 8px; }
+.sh-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); margin-bottom: 8px; }
+.sh-tb-btn { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
+.sh-tb-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
+/* `.is-active` also covers the `aria-pressed="true"` state on the same button — Toolbar sets both together. */
+.sh-tb-btn.is-active { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 12%, transparent); }
+.sh-tb-sep { width: 1px; background: var(--sh-border); margin: 4px 4px; }
+.sh-bubble { display: flex; gap: 2px; background: var(--sh-bg); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 2px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); }
+.sh-bubble button { border: 0; background: none; min-width: 26px; height: 26px; border-radius: 4px; cursor: pointer; color: var(--sh-text); }
+.sh-bubble button:hover { background: var(--sh-bg-raised); }
+.sh-bubble-input { border: 0; outline: none; padding: 0 6px; min-width: 220px; background: transparent; color: var(--sh-text); }
+.sh-gutter { display: flex; gap: 2px; }
+.sh-gutter-btn { width: 20px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
+.sh-gutter-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
+.sh-gutter-grip { cursor: grab; }
+
+/* ── Popups and menus ───────────────────────────────────────────────────── */
+.sh-popup-anchor { position: fixed; z-index: 9999; }
+.sh-popup, .sh-menu, .sh-submenu, .sh-dialog, .sh-refpicker-panel, .sh-findbar {
+  background: var(--sh-bg); border: 1px solid var(--sh-border); border-radius: 8px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.14); color: var(--sh-text);
+}
+.sh-popup { max-height: 260px; max-width: 280px; overflow-y: auto; padding: 4px; }
+.sh-popup-header { font-size: 0.75em; color: var(--sh-muted); padding: 4px 8px; display: flex; justify-content: space-between; gap: 8px; }
+.sh-popup-hint { font-family: monospace; }
+.sh-popup-group { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--sh-muted); padding: 6px 8px 2px; }
+.sh-popup-item, .sh-menu-item, .sh-refpicker-row { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; background: none; border-radius: 5px; text-align: left; cursor: pointer; color: inherit; font: inherit; font-size: 0.9em; }
+.sh-popup-item.is-selected, .sh-popup-item:hover, .sh-menu-item:hover, .sh-refpicker-row:hover { background: var(--sh-bg-raised); }
+.sh-popup-icon { color: var(--sh-muted); display: inline-flex; font-family: monospace; }
+.sh-popup-empty, .sh-refpicker-empty { color: var(--sh-muted); padding: 8px; font-size: 0.85em; }
+.sh-menu { position: fixed; z-index: 9999; min-width: 190px; padding: 4px; }
+.sh-submenu { position: absolute; left: 100%; top: 0; margin-left: 4px; padding: 4px; min-width: 160px; }
+.sh-menu-sep { height: 1px; background: var(--sh-border); margin: 4px 0; }
+.sh-menu-item:disabled { opacity: 0.4; cursor: default; }
+.sh-menu-item.is-danger { color: #e5484d; }
+.sh-menu-chevron { margin-left: auto; }
+.sh-refpicker { position: fixed; inset: 0; background: rgb(0 0 0 / 0.25); display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; z-index: 9998; }
+.sh-refpicker-panel { width: min(480px, 92vw); max-height: 60vh; display: flex; flex-direction: column; }
+.sh-refpicker-search, .sh-refpicker-head { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--sh-border); }
+.sh-refpicker-search input { flex: 1; border: 0; outline: none; background: transparent; color: inherit; font: inherit; }
+.sh-refpicker-back { display: inline-flex; gap: 4px; align-items: center; border: 0; background: none; color: var(--sh-muted); cursor: pointer; }
+.sh-refpicker-list { overflow-y: auto; padding: 4px; }
+.sh-refpicker-meta { margin-left: auto; color: var(--sh-muted); font-size: 0.8em; }
+.sh-dialog { position: fixed; z-index: 9999; left: 50%; top: 20vh; transform: translateX(-50%); width: min(460px, 92vw); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.sh-math-input { min-height: 70px; font-family: monospace; resize: vertical; border: 1px solid var(--sh-border); border-radius: 5px; padding: 6px; background: var(--sh-bg-raised); color: inherit; }
+.sh-math-preview { min-height: 32px; overflow-x: auto; }
+.sh-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.sh-dialog-actions button { border: 1px solid var(--sh-border); background: none; border-radius: 5px; padding: 4px 10px; cursor: pointer; color: inherit; }
+.sh-dialog-actions .is-primary { background: var(--sh-accent); border-color: var(--sh-accent); color: #fff; }
+.sh-findbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; align-items: center; padding: 4px 6px; margin-bottom: 6px; }
+.sh-findbar input { border: 1px solid var(--sh-border); border-radius: 4px; padding: 2px 6px; background: var(--sh-bg-raised); color: inherit; min-width: 0; }
+.sh-findbar button { border: 0; background: none; cursor: pointer; color: var(--sh-muted); padding: 2px 6px; border-radius: 4px; }
+.sh-findbar button:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
+.sh-findbar-count { font-size: 0.8em; color: var(--sh-muted); min-width: 36px; text-align: center; }
+/* Positioned off the right edge of the editor column — only works when the
+   host layout leaves room there (e.g. a wide centred column). Hidden below
+   1100px so it never overlaps content on a host that doesn't leave that room. */
+.sh-outline { position: absolute; right: -200px; top: 48px; width: 180px; display: flex; flex-direction: column; gap: 1px; }
+.sh-outline-item { text-align: left; border: 0; background: none; color: var(--sh-muted); font-size: 0.8em; padding: 2px 6px; border-radius: 4px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-outline-item.level-2 { padding-left: 16px; }
+.sh-outline-item.level-3 { padding-left: 26px; }
+.sh-outline-item.is-active { color: var(--sh-accent); }
+.sh-outline-item:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
+
+@media (max-width: 1100px) {
+  .sh-outline { display: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sh-popup, .sh-menu { animation: sh-pop 120ms cubic-bezier(0.16, 1, 0.3, 1); }
+  /* The dialog is centred with a transform, so it only fades. */
+  .sh-dialog { animation: sh-fade 120ms ease-out; }
+}
+@keyframes sh-pop { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+@keyframes sh-fade { from { opacity: 0; } to { opacity: 1; } }
