@@ -5,6 +5,11 @@ import { ArrowUpRight, Link2Off } from 'lucide-react';
 import type { ShuttleContextRef } from '../../context';
 import type { ResolvedBlock } from '../../host';
 
+type ViewState =
+  | { status: 'loading'; target: null }
+  | { status: 'missing'; target: null }
+  | { status: 'ok'; target: ResolvedBlock };
+
 /**
  * Read-only transclusion. The source block is rendered through this editor's
  * own schema, so it looks exactly as it does in its home note.
@@ -12,43 +17,47 @@ import type { ResolvedBlock } from '../../host';
 export default function BlockRefView({ node, editor, extension }: NodeViewProps) {
   const ctx = (extension.options as { ctx: ShuttleContextRef }).ctx;
   const refBlockId = node.attrs['refBlockId'] as string | null;
-  const [target, setTarget] = useState<ResolvedBlock | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<ViewState>({ status: 'loading', target: null });
   const body = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!refBlockId) { setLoading(false); return; }
+    if (!refBlockId) { setView({ status: 'missing', target: null }); return; }
     let cancelled = false;
-    setLoading(true);
+    setView({ status: 'loading', target: null });
     ctx.current.host.resolveBlock(refBlockId)
-      .then((r) => { if (!cancelled) setTarget(r); })
+      .then((r) => {
+        if (cancelled) return;
+        setView(r ? { status: 'ok', target: r } : { status: 'missing', target: null });
+      })
       .catch((error: unknown) => {
         ctx.current.host.log('warn', 'Block reference failed to resolve', { refBlockId, error: String(error) });
-        if (!cancelled) setTarget(null);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
+        if (!cancelled) setView({ status: 'missing', target: null });
+      });
     return () => { cancelled = true; };
   }, [refBlockId, ctx]);
 
+  // The body element only exists in the DOM while `status === 'ok'`, so this
+  // effect runs whenever that state (and therefore the ref) actually changes.
   useEffect(() => {
+    if (view.status !== 'ok') return;
     const el = body.current;
     if (!el) return;
     el.replaceChildren();
-    if (!target) return;
     try {
-      const content = editor.schema.nodeFromJSON(target.content);
+      const content = editor.schema.nodeFromJSON(view.target.content);
       el.appendChild(DOMSerializer.fromSchema(editor.schema).serializeNode(content));
     } catch {
       // Stored shape no longer parses against this schema: treat as unresolved.
-      setTarget(null);
+      ctx.current.host.log('warn', 'Transcluded block no longer fits the schema', { refBlockId });
+      setView({ status: 'missing', target: null });
     }
-  }, [target, editor]);
+  }, [view, editor, ctx, refBlockId]);
 
-  if (loading) {
+  if (view.status === 'loading') {
     return <NodeViewWrapper className="sh-blockref" contentEditable={false}><div className="sh-blockref-status">Resolving reference…</div></NodeViewWrapper>;
   }
 
-  if (!target) {
+  if (view.status === 'missing') {
     return (
       <NodeViewWrapper className="sh-blockref is-missing" contentEditable={false}>
         <div className="sh-blockref-status"><Link2Off size={13} strokeWidth={1.75} /> Block not found</div>
@@ -56,6 +65,7 @@ export default function BlockRefView({ node, editor, extension }: NodeViewProps)
     );
   }
 
+  const { target } = view;
   return (
     <NodeViewWrapper className="sh-blockref" contentEditable={false}>
       <button
