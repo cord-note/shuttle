@@ -47,6 +47,13 @@ describe('image upload', () => {
     expect(host.calls.logs[0]?.level).toBe('error');
   });
 
+  it('explains a failed upload in its title', () => {
+    const { e } = make(createFakeHost());
+    e.commands.setContent({ type: 'doc', content: [{ type: 'image', attrs: { src: 'attachment:abc', uploadError: true } }] });
+    expect(e.getHTML()).toContain('title="Upload failed — click to retry"');
+    expect(e.getHTML()).toContain('data-upload-error');
+  });
+
   it('resolves stored src through the host when rendering', () => {
     const host = createFakeHost();
     const { e } = make(host);

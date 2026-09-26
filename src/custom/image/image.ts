@@ -27,7 +27,9 @@ export function shuttleImage(ctx: ShuttleContextRef) {
         uploadId: { default: null, rendered: false },
         uploadError: {
           default: false,
-          renderHTML: (attrs: Record<string, unknown>) => (attrs['uploadError'] ? { 'data-upload-error': '' } : {}),
+          renderHTML: (attrs: Record<string, unknown>) => (attrs['uploadError']
+            ? { 'data-upload-error': '', title: 'Upload failed — click to retry' }
+            : {}),
         },
       };
     },
