@@ -5,7 +5,7 @@ import { Markdown } from '@tiptap/markdown';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import { TableKit } from '@tiptap/extension-table';
 import { CellSelection } from '@tiptap/pm/tables';
-import { MarkdownClipboard } from '../src/custom/markdown/clipboard';
+import { MarkdownClipboard, htmlHasStructure, markdownClipboardKey } from '../src/custom/markdown/clipboard';
 
 let editor: Editor | null = null;
 afterEach(() => { editor?.destroy(); editor = null; });
@@ -304,5 +304,123 @@ describe('markdown copy', () => {
     expect(result).toContain('|');
     expect(result).toContain('a1');
     expect(result).toContain('b2');
+  });
+});
+
+describe('markdown paste with an HTML clipboard', () => {
+  const VSCODE_HTML =
+    '<meta charset="utf-8"><div style="color: #cccccc;background-color: #1f1f1f;font-family: Consolas;font-weight: normal;font-size: 14px;line-height: 19px;white-space: pre;">' +
+    '<div><span style="color: #569cd6;font-weight: bold;"># Title</span></div><br>' +
+    '<div><span style="color: #6796e6;">-</span><span style="color: #cccccc;"> one</span></div>' +
+    '<div><span style="color: #6796e6;">-</span><span style="color: #cccccc;"> two</span></div></div>';
+  const MD = '# Title\n\n- one\n- two';
+
+  function pasteEvent(e: Editor, text: string, html: string): void {
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    dt.setData('text/html', html);
+    e.view.dom.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }
+
+  /** Calls only our plugin's `handlePaste`, so other plugins' paste handlers don't mask the result. */
+  function ourHandlePaste(e: Editor, text: string, html: string): boolean {
+    const plugin = markdownClipboardKey.get(e.state);
+    const handler = plugin?.props.handlePaste;
+    if (!plugin || !handler) throw new Error('markdownClipboard has no handlePaste');
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    dt.setData('text/html', html);
+    const event = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+    return handler.call(plugin, e.view, event, Slice.empty) === true;
+  }
+
+  const types = (e: Editor): (string | undefined)[] => (toJSON(e).content ?? []).map((n) => n.type);
+
+  it('converts markdown copied from VS Code (styled div/span HTML)', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    pasteEvent(e, MD, VSCODE_HTML);
+    expect(types(e)).toEqual(['heading', 'bulletList', 'paragraph']);
+    expect(JSON.stringify(toJSON(e))).not.toContain('# Title');
+  });
+
+  it('converts markdown wrapped in a bare <pre> instead of making a code block', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    pasteEvent(e, '# Title\n\n- one', '<pre># Title\n\n- one</pre>');
+    expect(types(e)).toEqual(['heading', 'bulletList', 'paragraph']);
+  });
+
+  it('leaves rich HTML to ProseMirror', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    const html = '<h1>Title</h1><ul><li>one</li></ul>';
+    expect(ourHandlePaste(e, '# Title\n\n- one', html)).toBe(false);
+    pasteEvent(e, '# Title\n\n- one', html);
+    expect(types(e).slice(0, 2)).toEqual(['heading', 'bulletList']);
+  });
+
+  it('keeps a highlighted code snippet as code', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    const html = '<pre><code class="language-python"># comment\nx = 1</code></pre>';
+    expect(ourHandlePaste(e, '# comment\nx = 1', html)).toBe(false);
+    pasteEvent(e, '# comment\nx = 1', html);
+    expect(types(e)).not.toContain('heading');
+  });
+
+  it('does not convert inside a code block', () => {
+    const e = make({ type: 'doc', content: [{ type: 'codeBlock', content: [{ type: 'text', text: 'x' }] }] });
+    e.commands.setTextSelection(2);
+    expect(ourHandlePaste(e, MD, VSCODE_HTML)).toBe(false);
+  });
+
+  it('pasting from VS Code is a single undo step', () => {
+    const e = make('<p></p>');
+    const before = e.getJSON();
+    e.commands.setTextSelection(1);
+    pasteEvent(e, MD, VSCODE_HTML);
+    expect(e.getJSON()).not.toEqual(before);
+    e.commands.undo();
+    expect(e.getJSON()).toEqual(before);
+  });
+});
+
+describe('htmlHasStructure', () => {
+  it('treats editor-style HTML as unstructured', () => {
+    expect(htmlHasStructure('<div style="white-space: pre"><div><span style="color:red"># x</span></div><br></div>')).toBe(false);
+    expect(htmlHasStructure('<pre># Title</pre>')).toBe(false);
+    expect(htmlHasStructure('<meta charset="utf-8"><p>a</p><div>b</div><span>c</span><br>')).toBe(false);
+  });
+
+  it('ignores the Google Docs <b> wrapper', () => {
+    expect(htmlHasStructure('<b id="docs-internal-guid-1234" style="font-weight:normal"><p><span>a</span></p></b>')).toBe(false);
+  });
+
+  it('detects real structure', () => {
+    for (const html of [
+      '<h2>x</h2>', '<ul><li>x</li></ul>', '<ol><li>x</li></ol>', '<table><tr><td>x</td></tr></table>',
+      '<blockquote>x</blockquote>', '<img src="a.png">', '<a href="https://x">x</a>', '<hr>',
+      '<code>x</code>', '<strong>x</strong>', '<em>x</em>', '<i>x</i>', '<u>x</u>', '<s>x</s>', '<b>bold</b>',
+      '<span class="hljs-comment"># x</span>',
+    ]) {
+      expect(htmlHasStructure(html)).toBe(true);
+    }
+  });
+});
+
+describe('Shift+paste with an HTML clipboard', () => {
+  it('pastes literal text', () => {
+    const e = make('<p></p>');
+    e.commands.setTextSelection(1);
+    e.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', keyCode: 16, shiftKey: true, bubbles: true }));
+    const dt = new DataTransfer();
+    dt.setData('text/plain', '# Title\n\n- one');
+    dt.setData('text/html', '<div style="white-space: pre"><div># Title</div><br><div>- one</div></div>');
+    e.view.dom.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    e.view.dom.dispatchEvent(new KeyboardEvent('keyup', { key: 'Shift', keyCode: 16, bubbles: true }));
+    const types = (e.getJSON().content ?? []).map((n) => n.type);
+    expect(types.every((t) => t === 'paragraph')).toBe(true);
+    expect(JSON.stringify(e.getJSON())).toContain('# Title');
   });
 });

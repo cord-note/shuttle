@@ -120,10 +120,13 @@ extension.
 
 Markdown is input UX only — never the storage format. Round-tripping through markdown
 is lossy for a few types: subscript, superscript, and `fragmentLink` (which keeps only
-its label, since a fragment link isn't representable in markdown). Paste conversion
-also only sees `text/plain` clipboards; a clipboard that also carries `text/html` (VS
-Code, browsers, most editors) takes ProseMirror's HTML path instead, so the markdown
-is not converted.
+its label, since a fragment link isn't representable in markdown). Pasted text that
+looks like markdown is converted even when the clipboard also carries `text/html`, as
+long as that HTML is only a rendering of plain text (VS Code's styled lines, a bare
+`<pre>` from Notepad++ and similar editors). HTML with real structure — headings,
+lists, tables, links, inline formatting, or any `class` attribute (syntax-highlighted
+code copied from a web page) — takes ProseMirror's HTML path. Shift+paste always
+pastes literal text.
 
 ## Develop
 
