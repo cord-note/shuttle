@@ -10,6 +10,7 @@ import { guardHost } from './guardHost';
 import { collectFragmentLinkIds, collectMentionTargets, diffSets } from './doc/tracking';
 import { EMPTY_DOC, isValidDoc } from './doc/validate';
 import { toStoredJson } from './doc/persist';
+import { legacyPreview } from './doc/legacyText';
 import { stripPendingUploads, insertImageFiles } from './custom/image/upload';
 import { UNLINKED_REFRESH_META } from './custom/unlinkedMentions';
 import { Toolbar } from './ui/Toolbar';
@@ -192,7 +193,8 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       if (!valid && !rebuilt) {
         safeHost.log('warn', 'Document does not match the current schema; opened read-only', { docKey });
       }
-      loadDocument(editor, valid ? stored : EMPTY_DOC);
+      // A legacy note shows its text read-only; `lastDoc` stays null, so it is never saved.
+      loadDocument(editor, valid ? stored : legacyPreview(stored));
       editor.setEditable(valid, false);
     }
     loadedEditor.current = editor;
