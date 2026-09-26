@@ -110,3 +110,57 @@ describe('blockId guard', () => {
     editor.destroy();
   });
 });
+
+describe('blockId guard on split', () => {
+  const doc: JSONContent = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', attrs: { blockId: 'A' }, content: [text('aa')] },
+      { type: 'paragraph', attrs: { blockId: 'B' }, content: [text('bb')] },
+    ],
+  };
+  const blocks = (editor: { state: { doc: { forEach(f: (n: { textContent: string; attrs: Record<string, unknown> }) => void): void } } }) => {
+    const out: { text: string; id: unknown }[] = [];
+    editor.state.doc.forEach((n) => out.push({ text: n.textContent, id: n.attrs['blockId'] }));
+    return out;
+  };
+  const expectUnique = (list: { id: unknown }[]): void => {
+    expect(list.every((b) => typeof b.id === 'string' && (b.id as string).length > 0)).toBe(true);
+    expect(new Set(list.map((b) => b.id)).size).toBe(list.length);
+  };
+
+  // Positions: A's text starts at 1 and ends at 3.
+  it('Enter at the start keeps the id on the half holding the text', async () => {
+    const { editor } = makeEditor({ content: doc });
+    await sleep(0);
+    editor.chain().setTextSelection(1).splitBlock().run();
+    const list = blocks(editor);
+    expect(list.map((b) => b.text)).toEqual(['', 'aa', 'bb']);
+    expect(list[1]?.id).toBe('A');
+    expect(list[0]?.id).not.toBe('A');
+    expectUnique(list);
+    editor.destroy();
+  });
+
+  it('Enter at the end keeps the id on the text and gives the new line a fresh one', async () => {
+    const { editor } = makeEditor({ content: doc });
+    await sleep(0);
+    editor.chain().setTextSelection(3).splitBlock().run();
+    const list = blocks(editor);
+    expect(list.map((b) => b.text)).toEqual(['aa', '', 'bb']);
+    expect(list[0]?.id).toBe('A');
+    expectUnique(list);
+    editor.destroy();
+  });
+
+  it('Enter in the middle keeps the id on the first half', async () => {
+    const { editor } = makeEditor({ content: doc });
+    await sleep(0);
+    editor.chain().setTextSelection(2).splitBlock().run();
+    const list = blocks(editor);
+    expect(list.map((b) => b.text)).toEqual(['a', 'a', 'bb']);
+    expect(list[0]?.id).toBe('A');
+    expectUnique(list);
+    editor.destroy();
+  });
+});
