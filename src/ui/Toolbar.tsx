@@ -58,7 +58,7 @@ export function Toolbar({ editor, ctx }: Props) {
   };
 
   return (
-    <div className="sh-toolbar" role="toolbar">
+    <div className="sh-toolbar" role="toolbar" aria-label="Formatting">
       <Btn title={t('Bold', 'editor.bold')} active={s.bold} onRun={() => run().toggleBold().run()}><strong>B</strong></Btn>
       <Btn title={t('Italic', 'editor.italic')} active={s.italic} onRun={() => run().toggleItalic().run()}><em>I</em></Btn>
       <Btn title={t('Underline', 'editor.underline')} active={s.underline} onRun={() => run().toggleUnderline().run()}><Underline {...ic} /></Btn>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { ArrowLeft, Search } from 'lucide-react';
 import type { ShuttleContextRef } from '../context';
@@ -15,6 +15,7 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
   const [notes, setNotes] = useState<NoteRef[]>([]);
   const [note, setNote] = useState<NoteRef | null>(null);
   const [blocks, setBlocks] = useState<BlockSummary[] | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +41,12 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
   }, [note, ctx]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose(); };
+    // Escape from another overlay (e.g. the find bar's input) is that overlay's.
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return;
+      const target = e.target instanceof Node ? e.target : null;
+      if (target === null || target === document.body || target === document.documentElement || panel.current?.contains(target)) onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -50,7 +56,7 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
 
   return (
     <div className="sh-refpicker" onClick={onClose}>
-      <div className="sh-refpicker-panel" role="dialog" aria-label="Insert block reference" onClick={(e) => e.stopPropagation()}>
+      <div className="sh-refpicker-panel" ref={panel} role="dialog" aria-modal="true" aria-label="Insert block reference" onClick={(e) => e.stopPropagation()}>
         {note === null ? (
           <>
             <div className="sh-refpicker-search">

@@ -49,7 +49,7 @@ export function MathEditor({ editor, request, onClose }: { editor: Editor; reque
   };
 
   return (
-    <div className="sh-dialog" role="dialog" aria-label="Edit formula">
+    <div className="sh-dialog" role="dialog" aria-modal="true" aria-label="Edit formula">
       <textarea
         autoFocus
         className="sh-math-input"

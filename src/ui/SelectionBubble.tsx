@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import { useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { Link2, Unlink } from 'lucide-react';
 
@@ -7,6 +8,7 @@ import { Link2, Unlink } from 'lucide-react';
 export function SelectionBubble({ editor }: { editor: Editor }) {
   const [editingLink, setEditingLink] = useState(false);
   const [href, setHref] = useState('');
+  const isLink = useEditorState({ editor, selector: ({ editor: e }) => e.isActive('link') });
   // Escape cancels; the blur that follows unmounting the input must not apply.
   const cancelled = useRef(false);
 
@@ -59,7 +61,7 @@ export function SelectionBubble({ editor }: { editor: Editor }) {
           >
             <Link2 size={13} strokeWidth={1.75} />
           </button>
-          {editor.isActive('link') && (
+          {isLink && (
             <button type="button" title="Remove link" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}>
               <Unlink size={13} strokeWidth={1.75} />
             </button>

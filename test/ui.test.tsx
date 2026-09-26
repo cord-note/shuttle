@@ -229,6 +229,97 @@ describe('ui', () => {
     });
   });
 
+  describe('BlockMenu on an atom block', () => {
+    const setup = () => {
+      const made = makeEditor({
+        mode: 'notepad',
+        content: {
+          type: 'doc',
+          content: [
+            { type: 'horizontalRule' },
+            { type: 'paragraph', content: [{ type: 'text', text: 'next' }] },
+            { type: 'paragraph', content: [{ type: 'text', text: 'last' }] },
+          ],
+        },
+      });
+      expect(made.editor.state.doc.nodeAt(0)?.type.name).toBe('horizontalRule');
+      const container = renderAlone(
+        <BlockMenu editor={made.editor} ctx={made.ctx} pos={0} top={0} left={0} onClose={() => {}} />,
+      );
+      return { ...made, container };
+    };
+    const shape = (editor: Editor): string[] => {
+      const out: string[] = [];
+      editor.state.doc.forEach((n) => { out.push(n.type.name === 'horizontalRule' ? 'hr' : n.textContent); });
+      return out;
+    };
+
+    it('deletes the atom itself', () => {
+      const { editor, container } = setup();
+      act(() => { buttonByText(container, 'Delete').click(); });
+      expect(shape(editor)).toEqual(['next', 'last']);
+    });
+
+    it('duplicates the atom itself', () => {
+      const { editor, container } = setup();
+      act(() => { buttonByText(container, 'Duplicate').click(); });
+      expect(shape(editor)).toEqual(['hr', 'hr', 'next', 'last']);
+    });
+
+    it('moves the atom itself', () => {
+      const { editor, container } = setup();
+      act(() => { buttonByText(container, 'Move down').click(); });
+      expect(shape(editor)).toEqual(['next', 'hr', 'last']);
+    });
+
+    it('hides "Turn into" for an atom', () => {
+      const { container } = setup();
+      expect(buttonByText(container, 'Turn into')).toBeUndefined();
+    });
+  });
+
+  it('bubble "Remove link" tracks the selection live', async () => {
+    const { editor } = mount('note');
+    act(() => {
+      editor().commands.setContent({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [
+          { type: 'text', text: 'plain ' },
+          { type: 'text', text: 'linked', marks: [{ type: 'link', attrs: { href: 'https://x.test' } }] },
+        ] }],
+      });
+      editor().commands.focus();
+      editor().commands.setTextSelection({ from: 1, to: 6 });
+    });
+    // The bubble's element joins the document once the plugin first shows it.
+    await act(async () => { await sleep(300); });
+    const bubble = document.body.querySelector('.sh-bubble');
+    expect(bubble).toBeTruthy();
+    const removeBtn = (): Element | null => bubble!.querySelector('button[title="Remove link"]');
+    expect(removeBtn()).toBeNull();
+    act(() => { editor().commands.setTextSelection({ from: 8, to: 12 }); });
+    expect(removeBtn()).toBeTruthy();
+    act(() => { editor().commands.setTextSelection({ from: 1, to: 6 }); });
+    expect(removeBtn()).toBeNull();
+  });
+
+  it('ref picker ignores Escape from another overlay input', async () => {
+    const { container, editor, host } = mount('notepad');
+    host.keybindings = { 'block.insertRef': 'Mod+Shift+R' };
+    const press = (init: KeyboardEventInit): void => {
+      editor().view.someProp('handleKeyDown', (f) => f(editor().view, new KeyboardEvent('keydown', init)));
+    };
+    act(() => { press({ key: 'r', ctrlKey: true, shiftKey: true }); press({ key: 'f', ctrlKey: true }); });
+    await act(async () => { await sleep(5); });
+    const find = container.querySelector('input[placeholder="Find"]') as HTMLInputElement;
+    expect(find).toBeTruthy();
+    expect(container.querySelector('.sh-refpicker')).toBeTruthy();
+    act(() => { find.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    expect(container.querySelector('.sh-refpicker')).toBeTruthy();
+    act(() => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    expect(container.querySelector('.sh-refpicker')).toBeNull();
+  });
+
   it('notepad mode survives document switches', () => {
     const { editor, render } = mount('notepad');
     const docOf = (text: string): JSONContent => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] });

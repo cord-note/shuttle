@@ -37,7 +37,9 @@ export function BlockMenu({ editor, ctx, pos, top, left, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const node = editor.state.doc.nodeAt(pos);
   const blockId = (node?.attrs['blockId'] as string | null | undefined) ?? null;
-  const inside = pos + 1;
+  // Commands take the position just before the block: `topLevelAt` resolves it
+  // to the block itself, where `pos + 1` would be the gap after an atom.
+  const canTurnInto = node !== null && !node.isAtom;
 
   useEffect(() => {
     const onDown = (e: PointerEvent): void => {
@@ -70,28 +72,30 @@ export function BlockMenu({ editor, ctx, pos, top, left, onClose }: Props) {
 
   return (
     <div className="sh-menu" role="menu" style={{ top, left }} ref={ref}>
-      <button type="button" className="sh-menu-item" onMouseEnter={() => setTurnInto(true)} onClick={() => setTurnInto((v) => !v)}>
-        <Pilcrow {...ic} /><span>Turn into</span><ChevronRight size={12} strokeWidth={2} className="sh-menu-chevron" />
-      </button>
-      {turnInto && node && !node.isAtom && (
-        <div className="sh-submenu">
+      {canTurnInto && (
+        <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={turnInto} className="sh-menu-item" onMouseEnter={() => setTurnInto(true)} onClick={() => setTurnInto((v) => !v)}>
+          <Pilcrow {...ic} /><span>Turn into</span><ChevronRight size={12} strokeWidth={2} className="sh-menu-chevron" />
+        </button>
+      )}
+      {canTurnInto && turnInto && (
+        <div className="sh-submenu" role="menu">
           {TURN_INTO.map((o) => (
-            <button type="button" key={o.label} className="sh-menu-item" onClick={run(() => editor.commands.turnInto(inside, o.type, o.level))}>
+            <button type="button" role="menuitem" key={o.label} className="sh-menu-item" onClick={run(() => editor.commands.turnInto(pos, o.type, o.level))}>
               {o.icon}<span>{o.label}</span>
             </button>
           ))}
         </div>
       )}
+      {canTurnInto && <div className="sh-menu-sep" />}
+      <button type="button" role="menuitem" className="sh-menu-item" onClick={run(() => editor.commands.duplicateBlock(pos))}><Copy {...ic} /><span>Duplicate</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item" onClick={run(() => editor.commands.moveBlock(pos, -1))}><ArrowUp {...ic} /><span>Move up</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item" onClick={run(() => editor.commands.moveBlock(pos, 1))}><ArrowDown {...ic} /><span>Move down</span></button>
       <div className="sh-menu-sep" />
-      <button type="button" className="sh-menu-item" onClick={run(() => editor.commands.duplicateBlock(inside))}><Copy {...ic} /><span>Duplicate</span></button>
-      <button type="button" className="sh-menu-item" onClick={run(() => editor.commands.moveBlock(inside, -1))}><ArrowUp {...ic} /><span>Move up</span></button>
-      <button type="button" className="sh-menu-item" onClick={run(() => editor.commands.moveBlock(inside, 1))}><ArrowDown {...ic} /><span>Move down</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item" disabled={!blockId} onClick={copyId}><Link {...ic} /><span>Copy block id</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item" disabled={!blockId} onClick={fragment('tag')}><Tag {...ic} /><span>Tag block</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item" disabled={!blockId} onClick={fragment('noteLink')}><Link2 {...ic} /><span>Link to note</span></button>
       <div className="sh-menu-sep" />
-      <button type="button" className="sh-menu-item" disabled={!blockId} onClick={copyId}><Link {...ic} /><span>Copy block id</span></button>
-      <button type="button" className="sh-menu-item" disabled={!blockId} onClick={fragment('tag')}><Tag {...ic} /><span>Tag block</span></button>
-      <button type="button" className="sh-menu-item" disabled={!blockId} onClick={fragment('noteLink')}><Link2 {...ic} /><span>Link to note</span></button>
-      <div className="sh-menu-sep" />
-      <button type="button" className="sh-menu-item is-danger" onClick={run(() => editor.commands.deleteBlock(inside))}><Trash2 {...ic} /><span>Delete</span></button>
+      <button type="button" role="menuitem" className="sh-menu-item is-danger" onClick={run(() => editor.commands.deleteBlock(pos))}><Trash2 {...ic} /><span>Delete</span></button>
     </div>
   );
 }
