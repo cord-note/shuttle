@@ -32,6 +32,11 @@ export function slashCommand(ctx: ShuttleContextRef, mode: ShuttleMode) {
           char: '/',
           allowSpaces: false,
           startOfLine: false,
+          // Never in code: a `/` there is text, and "Text" would unwrap the code block.
+          allow: ({ state, range }) => {
+            const $from = state.doc.resolve(range.from);
+            return !$from.parent.type.spec.code && !$from.marks().some((m) => m.type.spec.code);
+          },
           items: ({ query }) => filterSlashItems(query, mode),
           command: ({ editor, range, props }) => props.run({ editor, range, ctx }),
           render: suggestionPopup(SlashList, { maxHeight: 260, maxWidth: 240 }),

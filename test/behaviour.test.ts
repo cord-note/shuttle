@@ -168,6 +168,28 @@ describe('slash menu', () => {
     expect(slashPluginKey.getState(e.state)?.active).toBe(true);
   });
 
+  it('stays closed inside a code block', () => {
+    const e = make(ctxWith(), 'note', '<pre><code>let x = 1</code></pre>');
+    e.commands.setTextSelection(e.state.doc.content.size - 1);
+    e.commands.insertContent(' /');
+    expect(e.state.doc.firstChild?.type.name).toBe('codeBlock');
+    expect(slashPluginKey.getState(e.state)?.active).toBe(false);
+  });
+
+  it('stays closed inside inline code', () => {
+    const e = make(ctxWith(), 'note', '<p><code>abc</code></p>');
+    e.commands.setTextSelection(3);
+    e.commands.insertContent(' /');
+    expect(slashPluginKey.getState(e.state)?.active).toBe(false);
+  });
+
+  it('opens inside a paragraph', () => {
+    const e = make(ctxWith(), 'note', '<p>abc</p>');
+    e.commands.setTextSelection(e.state.doc.content.size - 1);
+    e.commands.insertContent(' /');
+    expect(slashPluginKey.getState(e.state)?.active).toBe(true);
+  });
+
   describe('math items', () => {
     const cases: [string, 'blockMath' | 'inlineMath', string][] = [
       ['Math Block', 'blockMath', '<p>a</p><p>/</p><p>b</p>'],
