@@ -1,8 +1,27 @@
 {
-  "name": "@cord/shuttle",
+  "name": "shuttle-editor",
   "version": "0.1.0",
-  "private": true,
-  "description": "Shuttle — Cord's editor: official Tiptap 3 extensions plus links, notepad mode and transclusion.",
+  "description": "A React rich-text editor for note-taking apps, built on Tiptap 3: wiki links, addressable blocks, transclusion, math, tables and markdown paste.",
+  "keywords": [
+    "tiptap",
+    "prosemirror",
+    "editor",
+    "react",
+    "markdown",
+    "notes",
+    "wiki-links",
+    "katex"
+  ],
+  "homepage": "https://github.com/Alexander-288/shuttle#readme",
+  "bugs": {
+    "url": "https://github.com/Alexander-288/shuttle/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alexander-288/shuttle.git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "author": "alexander-288",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
@@ -10,15 +29,41 @@
     ".": "./src/index.ts",
     "./styles.css": "./src/styles/shuttle.css"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./styles.css": "./dist/styles.css",
+      "./package.json": "./package.json"
+    }
+  },
   "scripts": {
+    "build": "tsup && node scripts/copy-styles.mjs",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "playground": "vite --config playground/vite.config.ts"
+    "playground": "vite --config playground/vite.config.ts",
+    "prepack": "pnpm build"
   },
   "peerDependencies": {
     "katex": "^0.16.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^18.3.1 || ^19.0.0",
+    "react-dom": "^18.3.1 || ^19.0.0"
   },
   "dependencies": {
     "@tiptap/core": "^3.31.3",
@@ -62,6 +107,7 @@
     "katex": "^0.16.45",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tsup": "^8.5.1",
     "typescript": "^5.4.5",
     "vite": "^5.2.0"
   },
