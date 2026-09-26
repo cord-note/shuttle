@@ -55,4 +55,13 @@ describe('isValidDoc', () => {
     expect(isValidDoc(editor.schema, { type: 'doc', content: [{ type: 'text', text: 'x' }] })).toBe(false);
     editor.destroy();
   });
+
+  it('returns false rather than throwing for non-object input', () => {
+    const { editor } = makeEditor();
+    expect(isValidDoc(editor.schema, null)).toBe(false);
+    expect(isValidDoc(editor.schema, undefined)).toBe(false);
+    expect(isValidDoc(editor.schema, 'x')).toBe(false);
+    expect(isValidDoc(editor.schema, 42)).toBe(false);
+    editor.destroy();
+  });
 });

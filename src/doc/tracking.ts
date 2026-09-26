@@ -1,6 +1,13 @@
 import type { Node as PMNode } from '@tiptap/pm/model';
 
-/** Note ids targeted by `[[wiki links]]` in the document. */
+/**
+ * Note ids targeted by `[[wiki links]]` in the document.
+ *
+ * Every `mention` node is a wiki link today — there is a single Mention
+ * extension, not one per suggestion trigger. Do not filter on
+ * `mentionSuggestionChar`: stored links may carry the schema's default '@'
+ * attribute value even though wiki links are triggered by `[[`.
+ */
 export function collectMentionTargets(doc: PMNode): Set<string> {
   const ids = new Set<string>();
   doc.descendants((node) => {
