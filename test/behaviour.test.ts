@@ -2,8 +2,9 @@ import { describe, it, expect, afterEach } from 'bun:test';
 import { Editor, Extension, type AnyExtension, type JSONContent } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
+import Mathematics from '@tiptap/extension-mathematics';
 import { createFakeHost } from '../src/testing/fakeHost';
-import { noopEvents, type ShuttleContextRef } from '../src/context';
+import { noopEvents, type MathEditRequest, type ShuttleContextRef } from '../src/context';
 import type { NoteRef } from '../src/host';
 import { unlinkedMentions, UNLINKED_REFRESH_META } from '../src/custom/unlinkedMentions';
 import { keybindings } from '../src/custom/keybindings/keybindings';
@@ -34,6 +35,20 @@ const ctxWith = (overrides = {}, docKey = 'n-alpha'): ShuttleContextRef => {
   return { current: { host, events: noopEvents, docKey } };
 };
 
+const ours = (e: Editor) =>
+  e.state.plugins.find((pl) => (pl as unknown as { key: string }).key.startsWith('shuttleKeybindings'));
+
+const decorated = (e: Editor): (string | null)[] =>
+  [...e.view.dom.querySelectorAll('.unlinked-mention')].map((m) => m.textContent);
+
+const hostCtx = (titles: string[], docKey = 'self'): ShuttleContextRef => ({
+  current: {
+    host: createFakeHost({ notes: titles.map((t, i) => ({ id: `n${i}`, title: t })) }),
+    events: noopEvents,
+    docKey,
+  },
+});
+
 const press = (e: Editor, key: string, mods: Partial<KeyboardEventInit> = {}) =>
   e.view.someProp('handleKeyDown', (f) => f(e.view, new KeyboardEvent('keydown', { key, ...mods })));
 
@@ -60,6 +75,40 @@ describe('unlinked mentions', () => {
     const e = make({ current: { host, events: noopEvents, docKey: 'x' } });
     const marks = [...e.view.dom.querySelectorAll('.unlinked-mention')].map((m) => m.textContent);
     expect(marks).toEqual(['Gamma Ray']);
+  });
+});
+
+describe('unlinked mentions: scope and updates', () => {
+  it('uses Unicode word boundaries', () => {
+    const e = make(hostCtx(['Kot']), 'note', '<p>Kotów nie ma</p><p>Kot śpi</p>');
+    expect(decorated(e)).toEqual(['Kot']);
+    expect(e.view.dom.querySelectorAll('p')[1]?.querySelector('.unlinked-mention')).not.toBeNull();
+  });
+
+  it('skips inline code, links and code blocks', () => {
+    const e = make(hostCtx(['Gamma']), 'note',
+      '<p><code>Gamma</code> <a href="x">Gamma</a></p><pre><code>Gamma</code></pre><p>plain Gamma</p>');
+    expect(decorated(e)).toEqual(['Gamma']);
+  });
+
+  it('keeps every paragraph correct when only the middle one is edited', () => {
+    const e = make(hostCtx(['Gamma', 'Delta']), 'note', '<p>Gamma one</p><p>two</p><p>Gamma three</p>');
+    expect(decorated(e)).toEqual(['Gamma', 'Gamma']);
+    // Caret at the end of the middle paragraph ("two" spans 12..15).
+    e.commands.insertContentAt(15, ' Delta');
+    expect(decorated(e)).toEqual(['Gamma', 'Delta', 'Gamma']);
+    e.commands.insertContentAt(13, 'x'); // "txwo Delta" — still one Delta
+    expect(decorated(e)).toEqual(['Gamma', 'Delta', 'Gamma']);
+    e.commands.deleteRange({ from: 16, to: 22 }); // remove " Delta"
+    expect(decorated(e)).toEqual(['Gamma', 'Gamma']);
+    expect(e.state.doc.child(1).textContent).toBe('txwo');
+  });
+
+  it('rescans when an edit joins two paragraphs', () => {
+    const e = make(hostCtx(['Gamma Ray']), 'note', '<p>Gamma</p><p>Ray</p>');
+    expect(decorated(e)).toEqual([]);
+    e.commands.insertContentAt({ from: 6, to: 8 }, ' ');
+    expect(decorated(e)).toEqual(['Gamma Ray']);
   });
 });
 
@@ -96,9 +145,9 @@ describe('keybindings', () => {
     const e = make(ctxWith({ 'editor.toggleTask': 'Mod+Shift+Enter' }));
     e.commands.setTextSelection(2);
     // Our plugin alone must not handle it...
-    const ours = e.state.plugins.find((pl) => (pl as unknown as { key: string }).key.startsWith('shuttleKeybindings'));
+    const plugin = ours(e);
     const event = new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true });
-    expect(ours?.props.handleKeyDown?.call(ours, e.view, event)).toBeFalsy();
+    expect(plugin?.props.handleKeyDown?.call(plugin, e.view, event)).toBeFalsy();
     // ...so it falls through to Tiptap's own Mod-Enter (a hard break).
     press(e, 'Enter', { ctrlKey: true });
     expect(e.getJSON().content?.[0]?.content?.some((n) => n.type === 'hardBreak')).toBe(true);
@@ -117,6 +166,47 @@ describe('slash menu', () => {
     // Suggestion only triggers after a space or at line start.
     e.commands.insertContent(' /');
     expect(slashPluginKey.getState(e.state)?.active).toBe(true);
+  });
+
+  describe('math items', () => {
+    const cases: [string, 'blockMath' | 'inlineMath', string][] = [
+      ['Math Block', 'blockMath', '<p>a</p><p>/</p><p>b</p>'],
+      ['Math Block', 'blockMath', '<p>a</p><p>/</p>'],
+      ['Math (inline)', 'inlineMath', '<p>a</p><p>/</p><p>b</p>'],
+      ['Math (inline)', 'inlineMath', '<p>a</p><p>/</p>'],
+    ];
+    for (const [title, type, html] of cases) {
+      it(`${title} inserts ${type} and opens its editor (${html})`, () => {
+        let req: MathEditRequest | null = null;
+        const host = createFakeHost();
+        const ctx: ShuttleContextRef = {
+          current: { host, events: { ...noopEvents, editMath: (r) => { req = r; } }, docKey: 'x' },
+        };
+        const e = make(ctx, 'note', html, [Mathematics]);
+        const item = filterSlashItems(title, 'note').find((i) => i.title === title)!;
+        e.commands.setTextSelection(5);
+        item.run({ editor: e, range: { from: 4, to: 5 }, ctx });
+        let found = false;
+        e.state.doc.descendants((n) => { if (n.type.name === type) found = true; });
+        expect(found).toBe(true);
+        expect(req).not.toBeNull();
+        const r = req as unknown as MathEditRequest;
+        expect(r.kind).toBe(type === 'blockMath' ? 'block' : 'inline');
+        expect(e.state.doc.nodeAt(r.pos)?.type.name).toBe(type);
+      });
+    }
+  });
+
+  it('keybindings stay out of the way while the slash menu is open', () => {
+    const e = make(ctxWith(), 'notepad', '<p>one</p><p>two</p>');
+    e.commands.setTextSelection(4);
+    e.commands.insertContent(' /');
+    expect(slashPluginKey.getState(e.state)?.active).toBe(true);
+    const before = e.state.doc.toJSON();
+    const plugin = ours(e);
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', altKey: true });
+    expect(plugin?.props.handleKeyDown?.call(plugin, e.view, event)).toBeFalsy();
+    expect(e.state.doc.toJSON()).toEqual(before);
   });
 
   it('passes the document key with fragment actions', () => {

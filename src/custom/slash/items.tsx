@@ -2,7 +2,6 @@ import type { Editor, JSONContent, Range } from '@tiptap/core';
 // Type-only: declare the commands of extensions a later task registers.
 import type {} from '@tiptap/extension-details';
 import type {} from '@tiptap/extension-table';
-import type {} from '@tiptap/extension-mathematics';
 import type { ReactNode } from 'react';
 import {
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Code2, Quote, Minus,
@@ -41,6 +40,25 @@ const insert = (nodes: JSONContent[]) => (args: SlashArgs): void => {
   clear(args).insertContent(nodes).run();
 };
 
+/**
+ * Inserts an empty math node where the `/` query was and asks the host UI to
+ * edit it. The official insert*Math commands refuse empty latex, so the node
+ * is inserted directly. An empty paragraph may be replaced by a block node,
+ * so the new node is looked up near the range rather than assumed to be at it.
+ */
+const insertMath = (kind: 'inline' | 'block') => (args: SlashArgs): void => {
+  const type = kind === 'block' ? 'blockMath' : 'inlineMath';
+  const { from } = args.range;
+  if (!clear(args).insertContentAt(from, { type, attrs: { latex: '' } }).run()) return;
+
+  const doc = args.editor.state.doc;
+  let pos: number | null = null;
+  doc.nodesBetween(Math.max(0, from - 2), Math.min(doc.content.size, from + 3), (node, at) => {
+    if (node.type.name === type && (pos === null || Math.abs(at - from) < Math.abs(pos - from))) pos = at;
+  });
+  if (pos !== null) args.ctx.current.events.editMath({ kind, latex: '', pos });
+};
+
 // ── Template helpers ────────────────────────────────────────────────────────
 const p = (): JSONContent => ({ type: 'paragraph' });
 const h = (level: 1 | 2 | 3, text: string): JSONContent => ({ type: 'heading', attrs: { level }, content: [{ type: 'text', text }] });
@@ -63,21 +81,8 @@ export const SLASH_ITEMS: readonly SlashItem[] = [
   { title: 'Divider', description: 'Horizontal rule', group: 'Insert', icon: icon(Minus), run: (a) => clear(a).setHorizontalRule().run() },
   { title: 'Table', description: '3 × 3 table with header', group: 'Insert', icon: icon(Table), run: (a) => clear(a).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
   { title: 'Image', description: 'Upload an image', group: 'Insert', icon: icon(ImageIcon), run: (a) => { clear(a).run(); a.ctx.current.events.pickImage(); } },
-  {
-    title: 'Math (inline)', description: 'Inline LaTeX formula', group: 'Insert', icon: icon(Sigma),
-    run: (a) => {
-      clear(a).insertInlineMath({ latex: '' }).run();
-      a.ctx.current.events.editMath({ kind: 'inline', latex: '', pos: a.range.from });
-    },
-  },
-  {
-    title: 'Math Block', description: 'Display LaTeX formula', group: 'Insert', icon: icon(Pi),
-    run: (a) => {
-      clear(a).insertBlockMath({ latex: '' }).run();
-      const pos = a.editor.state.selection.from - 1;
-      a.ctx.current.events.editMath({ kind: 'block', latex: '', pos: Math.max(0, pos) });
-    },
-  },
+  { title: 'Math (inline)', description: 'Inline LaTeX formula', group: 'Insert', icon: icon(Sigma), run: insertMath('inline') },
+  { title: 'Math Block', description: 'Display LaTeX formula', group: 'Insert', icon: icon(Pi), run: insertMath('block') },
   {
     title: 'Block reference', description: 'Embed a block from another note', group: 'Insert', icon: icon(Blocks), only: 'notepad',
     run: (a) => { clear(a).run(); a.ctx.current.events.openRefPicker(); },
