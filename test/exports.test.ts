@@ -6,7 +6,7 @@ describe('public API', () => {
     for (const name of [
       'ShuttleEditor', 'buildExtensions', 'createFakeHost', 'SHUTTLE_KEYBINDINGS', 'KEYBINDING_GROUPS', 'keybindingDef',
       'eventToAccel', 'eventToAccels', 'formatAccel', 'resolveBindings', 'BLOCK_TYPES', 'isValidDoc', 'EMPTY_DOC',
-      'topLevelAt', 'blockIdAt', 'toStoredJson', 'UNLINKED_REFRESH_META',
+      'topLevelAt', 'blockIdAt', 'toStoredJson', 'UNLINKED_REFRESH_META', 'BLOCK_ID_ATTRIBUTE',
     ]) {
       expect(shuttle).toHaveProperty(name);
     }

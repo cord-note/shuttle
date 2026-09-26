@@ -4,7 +4,7 @@ export type {
 } from './host';
 export type { ShuttleContext, ShuttleContextRef, ShuttleUiEvents, MathEditRequest } from './context';
 export { buildExtensions, type BuildOptions } from './extensions';
-export { BLOCK_TYPES } from './extensions/blockTypes';
+export { BLOCK_TYPES, BLOCK_ID_ATTRIBUTE } from './extensions/blockTypes';
 export {
   SHUTTLE_KEYBINDINGS, KEYBINDING_GROUPS, keybindingDef, eventToAccel, eventToAccels, formatAccel, resolveBindings,
   type KeybindingId, type KeybindingDef, type KeybindingMap, type KeybindingGroup,

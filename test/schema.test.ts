@@ -2,7 +2,7 @@ import { describe, it, expect } from 'bun:test';
 import type { JSONContent } from '@tiptap/core';
 import { EVERYTHING, para, text } from './fixtures';
 import { makeEditor, sleep } from './helpers';
-import { BLOCK_TYPES } from '../src/extensions/blockTypes';
+import { BLOCK_TYPES, BLOCK_ID_ATTRIBUTE } from '../src/extensions/blockTypes';
 
 describe('schema', () => {
   for (const mode of ['note', 'notepad'] as const) {
@@ -52,6 +52,13 @@ describe('schema', () => {
     expect(ids.length).toBeGreaterThan(1);
     expect(ids.every((id) => typeof id === 'string' && id.length > 0)).toBe(true);
     expect(new Set(ids).size).toBe(ids.length);
+    editor.destroy();
+  });
+
+  it('renders blockId as data-blockid in HTML, so hosts can locate blocks in the DOM', async () => {
+    const { editor } = makeEditor({ content: { type: 'doc', content: [{ type: 'paragraph', attrs: { blockId: 'x' }, content: [text('hi')] }] } });
+    await sleep(0);
+    expect(editor.getHTML()).toContain(`${BLOCK_ID_ATTRIBUTE}="x"`);
     editor.destroy();
   });
 

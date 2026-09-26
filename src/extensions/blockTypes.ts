@@ -7,3 +7,9 @@ export const BLOCK_TYPES: readonly string[] = [
   'paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock',
   'blockMath', 'horizontalRule', 'image', 'youtube', 'twitch', 'table', 'details', 'blockRef',
 ];
+
+/**
+ * HTML attribute UniqueID renders for `blockId`; hosts use it to locate
+ * blocks, e.g. `[data-blockid="…"]`.
+ */
+export const BLOCK_ID_ATTRIBUTE = 'data-blockid';

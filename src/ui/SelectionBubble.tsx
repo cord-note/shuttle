@@ -1,8 +1,19 @@
 import { useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
+import type { EditorState } from '@tiptap/pm/state';
+import { TextSelection } from '@tiptap/pm/state';
 import { useEditorState } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { Link2, Unlink } from 'lucide-react';
+
+/**
+ * Whether the bubble should show: a non-empty text selection, in an editable,
+ * non-code-block editor. A NodeSelection (e.g. a selected math block) never
+ * shows it — formatting makes no sense there.
+ */
+export function shouldShowBubble({ editor, state, from, to }: { editor: Editor; state: EditorState; from: number; to: number }): boolean {
+  return from !== to && editor.isEditable && !editor.isActive('codeBlock') && state.selection instanceof TextSelection;
+}
 
 /** Formatting and link editing over a text selection. */
 export function SelectionBubble({ editor }: { editor: Editor }) {
@@ -24,7 +35,7 @@ export function SelectionBubble({ editor }: { editor: Editor }) {
     <BubbleMenu
       editor={editor}
       className="sh-bubble"
-      shouldShow={({ editor: e, from, to }) => from !== to && e.isEditable && !e.isActive('codeBlock')}
+      shouldShow={({ editor: e, state, from, to }) => shouldShowBubble({ editor: e, state, from, to })}
     >
       {editingLink ? (
         <input
