@@ -100,3 +100,15 @@ describe('shuttle.css covers every sh- class used in src/', () => {
     expect(found).toBe(true);
   });
 });
+
+describe('shuttle.css prose layout', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+
+  it('resets browser paragraph margins inside the editor', () => {
+    expect(css).toMatch(/\.sh-prose \.ProseMirror :where\([^)]*\bp\b[^)]*\)\s*\{[^}]*margin:\s*0/);
+  });
+
+  it('gives the task checkbox label a one-line height so it lines up with the text', () => {
+    expect(css).toMatch(/li\[data-checked\]\s*>\s*label\s*\{[^}]*height:\s*1lh/);
+  });
+});

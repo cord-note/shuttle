@@ -39,7 +39,14 @@
 .sh-content { position: relative; flex: 1; }
 .sh-mode-notepad .sh-content { padding-left: 44px; }
 .sh-prose .ProseMirror { outline: none; line-height: 1.65; padding: 8px 0 40vh; }
+/* Browser default margins (1em on p, lists, headings...) would stack on top of
+   the rhythm below and push task-item text below its checkbox. */
+.sh-prose .ProseMirror :where(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, table, figure) { margin: 0; }
 .sh-prose .ProseMirror > * + * { margin-top: 0.5em; }
+.sh-prose .ProseMirror > :is(h1, h2, h3):not(:first-child) { margin-top: 1em; }
+.sh-prose .ProseMirror :is(li, blockquote) > * + * { margin-top: 0.35em; }
+.sh-prose .ProseMirror :is(ul, ol) { padding-left: 1.5em; }
+.sh-prose .ProseMirror li + li { margin-top: 0.15em; }
 .sh-prose .ProseMirror p.is-editor-empty:first-child::before,
 .sh-prose .ProseMirror .is-empty::before {
   content: attr(data-placeholder); color: var(--sh-muted); float: left; height: 0; pointer-events: none;
@@ -68,10 +75,21 @@
   background: rgb(122 162 247 / 0.15);
   background: color-mix(in srgb, var(--sh-accent) 15%, transparent);
 }
-.sh-prose ul[data-type='taskList'] { list-style: none; padding-left: 4px; }
-.sh-prose ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
-.sh-prose ul[data-type='taskList'] input[type='checkbox'] { accent-color: var(--sh-accent); margin-top: 0.35em; }
-.sh-prose ul[data-type='taskList'] li[data-checked='true'] > div { color: var(--sh-muted); text-decoration: line-through; }
+/* Tiptap renders <li data-checked><label><input><span></label><div><p>…</p></div></li>.
+   The label is exactly one line tall and centres the checkbox in it, so the box
+   sits on the first line of text whatever the font size. */
+.sh-prose .ProseMirror ul[data-type='taskList'] { list-style: none; padding-left: 0.25em; }
+.sh-prose .ProseMirror li[data-checked] { display: flex; align-items: flex-start; gap: 0.5em; }
+.sh-prose .ProseMirror li[data-checked] > label {
+  display: flex; align-items: center; flex: none; user-select: none;
+  height: 1.65em; height: 1lh;
+}
+.sh-prose .ProseMirror li[data-checked] > label input[type='checkbox'] {
+  margin: 0; flex: none; width: 1em; height: 1em; accent-color: var(--sh-accent); cursor: pointer;
+}
+.sh-prose .ProseMirror li[data-checked] > div { flex: 1; min-width: 0; }
+.sh-prose .ProseMirror li[data-checked='true'] > div { color: var(--sh-muted); text-decoration: line-through; }
+.sh-prose .ProseMirror li[data-checked] > div > ul[data-type='taskList'] { padding-left: 0.25em; }
 .sh-prose .sh-details { border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 6px 10px; }
 .sh-prose .sh-has-focus { border-radius: 4px; }
 .sh-mode-notepad .sh-prose .sh-has-focus {
