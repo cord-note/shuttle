@@ -6,6 +6,7 @@ import type { TableOfContentData } from '@tiptap/extension-table-of-contents';
 import { buildExtensions } from './extensions';
 import type { MathEditRequest, ShuttleContextRef, ShuttleUiEvents } from './context';
 import type { ShuttleHost, ShuttleMode } from './host';
+import { guardHost } from './guardHost';
 import { collectFragmentLinkIds, collectMentionTargets, diffSets } from './doc/tracking';
 import { EMPTY_DOC, isValidDoc } from './doc/validate';
 import { toStoredJson } from './doc/persist';
@@ -96,8 +97,11 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
     pickImage: () => fileInput.current?.click(),
   }), []);
 
-  const ctxRef = useRef<ShuttleContextRef['current']>({ host, events, docKey });
-  ctxRef.current = { host, events, docKey };
+  // Every host call goes through the guard, so a throwing host cannot abort
+  // a transaction or skip a save.
+  const safeHost = useMemo(() => guardHost(host), [host]);
+  const ctxRef = useRef<ShuttleContextRef['current']>({ host: safeHost, events, docKey });
+  ctxRef.current = { host: safeHost, events, docKey };
   const ctx = useMemo<ShuttleContextRef>(() => ({ get current() { return ctxRef.current; } }), []);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,6 +153,13 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       if (ed !== loadedEditor.current || key === null || legacyRef.current) return;
       const currentHost = ctx.current.host;
 
+      // Schedule the save first: nothing a host callback does can cost the edit.
+      const saved = toSaved(ed);
+      lastDoc.current = saved;
+      pending.current = { key, doc: saved };
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(flush, latest.current.saveDebounceMs ?? DEFAULT_DEBOUNCE_MS);
+
       const nextMentions = collectMentionTargets(ed.state.doc);
       const linkDiff = diffSets(mentions.current, nextMentions);
       mentions.current = nextMentions;
@@ -160,12 +171,6 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       if (removedFragments.length > 0) currentHost.onFragmentLinksRemoved(key, removedFragments);
 
       reportStats(ed);
-
-      const saved = toSaved(ed);
-      lastDoc.current = saved;
-      pending.current = { key, doc: saved };
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(flush, latest.current.saveDebounceMs ?? DEFAULT_DEBOUNCE_MS);
     },
   }, [mode, twitchParent, placeholder]);
 
@@ -185,7 +190,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       legacyRef.current = !valid;
       setLegacy(!valid);
       if (!valid && !rebuilt) {
-        host.log('warn', 'Document does not match the current schema; opened read-only', { docKey });
+        safeHost.log('warn', 'Document does not match the current schema; opened read-only', { docKey });
       }
       loadDocument(editor, valid ? stored : EMPTY_DOC);
       editor.setEditable(valid, false);

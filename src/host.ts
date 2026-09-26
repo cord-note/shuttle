@@ -38,8 +38,8 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
  * through here, which is what lets the package run in the playground and in
  * tests against a fake.
  *
- * Promise-returning methods may reject; Shuttle catches the rejection,
- * degrades the affected UI, and reports it through `log`.
+ * Shuttle catches exceptions from every host method (sync or async), logs
+ * them via `log`, and degrades the affected feature.
  */
 export interface ShuttleHost {
   // ── Lookups ───────────────────────────────────────────────────────────────

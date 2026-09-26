@@ -96,6 +96,30 @@ describe('ShuttleEditor', () => {
     expect(h.host.calls.linksChanged.at(-1)).toEqual({ docKey: 'a', added: [], removed: ['n-alpha'] });
   });
 
+  it('still saves when the host throws from onLinksChanged', async () => {
+    const h = mount({});
+    const host = createFakeHost();
+    host.onLinksChanged = () => { throw new Error('boom'); };
+    h.render({ host });
+    act(() => {
+      h.editor().commands.insertContent({ type: 'mention', attrs: { id: 'n-alpha', label: 'Alpha', mentionSuggestionChar: '[[' } });
+    });
+    await act(async () => { await sleep(30); });
+    expect(JSON.stringify(h.saves.at(-1)?.doc)).toContain('n-alpha');
+    expect(host.calls.logs.some((l) => l.level === 'error' && l.message === 'Host call failed')).toBe(true);
+  });
+
+  it('keeps typing and saving when the host throws from listNoteTitles', async () => {
+    const host = createFakeHost();
+    host.listNoteTitles = () => { throw new Error('boom'); };
+    const h = mount({ host });
+    act(() => { h.editor().chain().focus('end').insertContent(' Alpha').run(); });
+    expect(h.editor().getText()).toBe('one Alpha');
+    await act(async () => { await sleep(30); });
+    expect(JSON.stringify(h.saves.at(-1)?.doc)).toContain('one Alpha');
+    expect(host.calls.logs.some((l) => l.level === 'error')).toBe(true);
+  });
+
   it('does not make loading undoable', () => {
     const h = mount({});
     expect(h.editor().can().undo()).toBe(false);
