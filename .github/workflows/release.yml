@@ -1,0 +1,102 @@
+name: Release
+
+# Pushing a tag such as `v0.1.0` publishes that version to npm and GitHub
+# Packages and creates a GitHub release with the packed tarball attached.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: oven-sh/setup-bun@v2
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      - run: pnpm typecheck
+      - run: bun test
+      - run: pnpm build
+
+  publish-npm:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      # `prepack` builds dist/ before the tarball is made. NPM_TOKEN is a
+      # repository secret (an npm automation token) the owner must add under
+      # Settings > Secrets and variables > Actions.
+      - run: pnpm publish --no-git-checks --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+  publish-github:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@alexander-288'
+      - run: pnpm install --frozen-lockfile
+      # GitHub Packages only accepts npm packages scoped to the repository
+      # owner, so the same build is published there as @alexander-288/shuttle.
+      # The rename happens only in this job's checkout and is never committed.
+      - run: npm pkg set name=@alexander-288/shuttle
+      - run: pnpm publish --no-git-checks --registry https://npm.pkg.github.com
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  github-release:
+    needs: [publish-npm, publish-github]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pack
+      - name: Create the GitHub release
+        run: gh release create "$GITHUB_REF_NAME" *.tgz --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
