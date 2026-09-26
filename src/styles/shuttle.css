@@ -103,6 +103,13 @@
 }
 .sh-prose .find-and-replace-result-current { background: #f5c542; color: #1d1d22; }
 .sh-prose .tiptap-mathematics-render { cursor: pointer; }
+/* Block math is centred by default; data-align="left" (the hover toggle) moves
+   it left. KaTeX centres both .katex-display and its inner .katex, so both are
+   overridden. */
+.sh-prose [data-type='block-math'] .block-math-inner { overflow-x: auto; overflow-y: hidden; }
+.sh-prose [data-type='block-math'] .katex-display { text-align: center; margin: 0.5em 0; }
+.sh-prose [data-type='block-math'][data-align='left'] .katex-display,
+.sh-prose [data-type='block-math'][data-align='left'] .katex-display > .katex { text-align: left; }
 
 /* ── Links and references ────────────────────────────────────────────────── */
 .sh-wikilink, .sh-fragment-link { color: var(--sh-link); cursor: pointer; }
@@ -130,6 +137,13 @@
   background: color-mix(in srgb, var(--sh-accent) 12%, transparent);
 }
 .sh-tb-sep { width: 1px; background: var(--sh-border); margin: 4px 4px; }
+.sh-math-align {
+  position: absolute; z-index: 5; width: 24px; height: 24px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--sh-border); border-radius: 999px; background: var(--sh-bg-raised);
+  color: var(--sh-muted); cursor: pointer; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+.sh-math-align:hover { color: var(--sh-accent); border-color: var(--sh-accent); }
 .sh-bubble { display: flex; gap: 2px; background: var(--sh-bg); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 2px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); }
 .sh-bubble button { border: 0; background: none; min-width: 26px; height: 26px; border-radius: 4px; cursor: pointer; color: var(--sh-text); }
 .sh-bubble button:hover { background: var(--sh-bg-raised); }

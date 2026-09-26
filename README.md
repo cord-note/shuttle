@@ -88,8 +88,10 @@ are excluded until they resolve to a real `src`.
 Blockquote, BulletList, OrderedList, ListItem, ListKeymap, HorizontalRule, HardBreak,
 Bold, Italic, Code, Strike, Underline, Link, Dropcursor, Gapcursor, UndoRedo,
 TrailingNode; its own CodeBlock disabled in favour of CodeBlockLowlight) ·
-CodeBlockLowlight · TaskList / TaskItem · Mathematics (including its `$…$` / `$$…$$`
-markdown tokenizers) · Mention · Image · Youtube · Twitch · FileHandler · UniqueID ·
+CodeBlockLowlight · TaskList / TaskItem · InlineMath / BlockMath from Mathematics
+(including their `$…$` / `$$…$$` markdown tokenizers; BlockMath renders in KaTeX
+display mode and gains an `align` attribute, left or centre, toggled from a hover
+button) · Mention · Image · Youtube · Twitch · FileHandler · UniqueID ·
 DragHandleReact · Placeholder · CharacterCount · BubbleMenu · Selection · Focus ·
 TableKit · Details (+ summary, content) · Highlight · Subscript · Superscript ·
 FindAndReplace · TableOfContents · `@tiptap/markdown`.
@@ -119,7 +121,7 @@ extension.
 ## Markdown
 
 Markdown is input UX only — never the storage format. Round-tripping through markdown
-is lossy for a few types: subscript, superscript, and `fragmentLink` (which keeps only
+is lossy for a few types: subscript, superscript, block math alignment, and `fragmentLink` (which keeps only
 its label, since a fragment link isn't representable in markdown). Pasted text that
 looks like markdown is converted even when the clipboard also carries `text/html`, as
 long as that HTML is only a rendering of plain text (VS Code's styled lines, a bare

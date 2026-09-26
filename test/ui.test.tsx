@@ -357,3 +357,46 @@ describe('ui', () => {
     expect(items).toEqual(['One', 'Two']);
   });
 });
+
+describe('math align toggle', () => {
+  it('appears on hovering block math and toggles its alignment', () => {
+    const { container, editor } = mount('note');
+    act(() => { editor().commands.setContent({ type: 'doc', content: [{ type: 'blockMath', attrs: { latex: 'x' } }, { type: 'paragraph' }] }); });
+    const math = container.querySelector('[data-type="block-math"]') as HTMLElement;
+    expect(container.querySelector('.sh-math-align')).toBeNull();
+    act(() => { math.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    const btn = container.querySelector('.sh-math-align') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    expect(btn.title).toBe('Align left');
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(editor().state.doc.firstChild?.attrs['align']).toBe('left');
+    const again = container.querySelector('[data-type="block-math"]') as HTMLElement;
+    act(() => { again.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    const btn2 = container.querySelector('.sh-math-align') as HTMLButtonElement;
+    expect(btn2.title).toBe('Centre');
+    act(() => { btn2.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(editor().state.doc.firstChild?.attrs['align']).toBe('center');
+  });
+
+  it('does not open the formula editor when clicked', () => {
+    const { container, editor } = mount('note');
+    act(() => { editor().commands.setContent({ type: 'doc', content: [{ type: 'blockMath', attrs: { latex: 'x' } }, { type: 'paragraph' }] }); });
+    const math = container.querySelector('[data-type="block-math"]') as HTMLElement;
+    act(() => { math.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    const btn = container.querySelector('.sh-math-align') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(container.querySelector('[aria-label="Edit formula"]')).toBeNull();
+  });
+
+  it('works on block math inside a notepad block', () => {
+    const { container, editor } = mount('notepad');
+    act(() => { editor().commands.setContent({ type: 'doc', content: [{ type: 'blockMath', attrs: { latex: 'x' } }] }); });
+    const math = container.querySelector('[data-type="block-math"]') as HTMLElement;
+    act(() => { math.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); });
+    const btn = container.querySelector('.sh-math-align') as HTMLButtonElement;
+    act(() => { btn.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    let align: unknown;
+    editor().state.doc.descendants((n) => { if (n.type.name === 'blockMath') align = n.attrs['align']; });
+    expect(align).toBe('left');
+  });
+});

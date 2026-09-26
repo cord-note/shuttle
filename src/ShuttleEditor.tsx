@@ -18,6 +18,7 @@ import { SelectionBubble } from './ui/SelectionBubble';
 import { BlockGutter } from './ui/BlockGutter';
 import { RefPicker } from './ui/RefPicker';
 import { MathEditor } from './ui/MathEditor';
+import { MathAlignToggle } from './ui/MathAlignToggle';
 import { FindBar } from './ui/FindBar';
 import { Outline } from './ui/Outline';
 
@@ -240,6 +241,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       <div className="sh-content">
         <EditorContent editor={editor} className="sh-prose" />
         {editor && editable && <SelectionBubble editor={editor} />}
+        {editor && editable && <MathAlignToggle editor={editor} />}
         {editor && editable && mode === 'notepad' && <BlockGutter editor={editor} ctx={ctx} />}
         {children}
       </div>

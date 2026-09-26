@@ -3,7 +3,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { CharacterCount, Focus, Placeholder, Selection } from '@tiptap/extensions';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
-import { Mathematics } from '@tiptap/extension-mathematics';
+import { InlineMath } from '@tiptap/extension-mathematics';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Twitch } from '@tiptap/extension-twitch';
 import { FileHandler } from '@tiptap/extension-file-handler';
@@ -28,6 +28,7 @@ import { fragmentLink } from '../custom/links/fragmentLink';
 import { blockRef } from '../custom/blockRef/blockRef';
 import { ShuttleDetails } from '../custom/markdown/details';
 import { MarkdownClipboard } from '../custom/markdown/clipboard';
+import { shuttleBlockMath } from '../custom/math/blockMath';
 import { shuttleImage } from '../custom/image/image';
 import { insertImageFiles } from '../custom/image/upload';
 import { unlinkedMentions } from '../custom/unlinkedMentions';
@@ -66,14 +67,13 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     CodeBlockLowlight.configure({ lowlight }),
     TaskList,
     TaskItem.configure({ nested: true }),
-    Mathematics.configure({
+    InlineMath.configure({
       katexOptions: { throwOnError: false },
-      inlineOptions: {
-        onClick: (node, pos) => ctx.current.events.editMath({ kind: 'inline', latex: String(node.attrs['latex'] ?? ''), pos }),
-      },
-      blockOptions: {
-        onClick: (node, pos) => ctx.current.events.editMath({ kind: 'block', latex: String(node.attrs['latex'] ?? ''), pos }),
-      },
+      onClick: (node, pos) => ctx.current.events.editMath({ kind: 'inline', latex: String(node.attrs['latex'] ?? ''), pos }),
+    }),
+    shuttleBlockMath.configure({
+      katexOptions: { throwOnError: false, displayMode: true },
+      onClick: (node, pos) => ctx.current.events.editMath({ kind: 'block', latex: String(node.attrs['latex'] ?? ''), pos }),
     }),
     shuttleImage(ctx),
     FileHandler.configure({

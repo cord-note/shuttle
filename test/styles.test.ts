@@ -112,3 +112,10 @@ describe('shuttle.css prose layout', () => {
     expect(css).toMatch(/li\[data-checked\]\s*>\s*label\s*\{[^}]*height:\s*1lh/);
   });
 });
+
+describe('shuttle.css block math alignment', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  it('left-aligns both the KaTeX display and its inner formula', () => {
+    expect(css).toMatch(/\[data-align='left'\] \.katex-display > \.katex[^{]*\{[^}]*text-align:\s*left/);
+  });
+});
