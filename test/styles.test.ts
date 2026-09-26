@@ -77,4 +77,26 @@ describe('shuttle.css covers every sh- class used in src/', () => {
       expect(cssHasClass(css, token)).toBe(true);
     });
   }
+
+  // Suggestion popups (mention/slash/wikilink lists) are portalled onto
+  // document.body by Tiptap's suggestion plugin, landing outside `.sh-root`.
+  // The `--sh-*` variables must therefore also be declared on a rule whose
+  // selector list includes `.sh-popup-anchor`, or they fall back to their
+  // neutral defaults for every popup.
+  it('declares --sh-bg on a selector list including .sh-popup-anchor', () => {
+    // Find each `<selector list> { <body> }` rule and check any whose
+    // selector list contains `.sh-popup-anchor` also declares `--sh-bg`.
+    const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+    let match: RegExpExecArray | null;
+    let found = false;
+    while ((match = ruleRe.exec(css))) {
+      const selectorList = match[1] ?? '';
+      const body = match[2] ?? '';
+      if (selectorList.includes('.sh-popup-anchor') && /--sh-bg\s*:/.test(body)) {
+        found = true;
+        break;
+      }
+    }
+    expect(found).toBe(true);
+  });
 });

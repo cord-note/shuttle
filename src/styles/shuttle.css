@@ -5,7 +5,11 @@
  */
 @import 'katex/dist/katex.min.css';
 
-.sh-root {
+/* Suggestion popups (mention/slash/wikilink lists) are portalled onto
+   document.body by Tiptap's suggestion plugin, landing outside `.sh-root` —
+   so the `--sh-*` variables have to be declared on `.sh-popup-anchor` too,
+   not just `.sh-root`, or every var falls back to its neutral default there. */
+.sh-root, .sh-popup-anchor {
   --sh-accent: var(--accent, #7aa2f7);
   --sh-bg: var(--bg-primary, #ffffff);
   --sh-bg-raised: var(--bg-secondary, #f5f5f7);
@@ -13,8 +17,12 @@
   --sh-text: var(--text-primary, #1d1d22);
   --sh-muted: var(--text-muted, #8a8a94);
   --sh-link: var(--link-color, var(--sh-accent));
+  --sh-on-accent: var(--on-accent, #fff);
   --sh-radius: 6px;
   --sh-font-size: var(--editor-font-size, 15px);
+}
+
+.sh-root {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -43,7 +51,11 @@
 .sh-prose code { background: var(--sh-bg-raised); border-radius: 4px; padding: 0.1em 0.35em; font-size: 0.9em; }
 .sh-prose pre { background: var(--sh-bg-raised); border-radius: var(--sh-radius); padding: 10px 12px; overflow-x: auto; }
 .sh-prose pre code { background: none; padding: 0; }
-.sh-prose mark { background: color-mix(in srgb, var(--sh-accent) 30%, transparent); color: inherit; border-radius: 2px; }
+.sh-prose mark {
+  background: rgb(122 162 247 / 0.3);
+  background: color-mix(in srgb, var(--sh-accent) 30%, transparent);
+  color: inherit; border-radius: 2px;
+}
 .sh-prose a { color: var(--sh-link); text-decoration: underline; text-underline-offset: 2px; }
 .sh-prose hr { border: none; border-top: 1px solid var(--sh-border); margin: 1em 0; }
 .sh-prose img { max-width: 100%; border-radius: var(--sh-radius); }
@@ -52,23 +64,35 @@
 .sh-prose table { border-collapse: collapse; width: 100%; }
 .sh-prose th, .sh-prose td { border: 1px solid var(--sh-border); padding: 4px 8px; vertical-align: top; }
 .sh-prose th { background: var(--sh-bg-raised); font-weight: 600; }
-.sh-prose .selectedCell { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+.sh-prose .selectedCell {
+  background: rgb(122 162 247 / 0.15);
+  background: color-mix(in srgb, var(--sh-accent) 15%, transparent);
+}
 .sh-prose ul[data-type='taskList'] { list-style: none; padding-left: 4px; }
 .sh-prose ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
 .sh-prose ul[data-type='taskList'] input[type='checkbox'] { accent-color: var(--sh-accent); margin-top: 0.35em; }
 .sh-prose ul[data-type='taskList'] li[data-checked='true'] > div { color: var(--sh-muted); text-decoration: line-through; }
 .sh-prose .sh-details { border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 6px 10px; }
 .sh-prose .sh-has-focus { border-radius: 4px; }
-.sh-mode-notepad .sh-prose .sh-has-focus { box-shadow: -3px 0 0 color-mix(in srgb, var(--sh-accent) 45%, transparent); }
+.sh-mode-notepad .sh-prose .sh-has-focus {
+  box-shadow: -3px 0 0 rgb(122 162 247 / 0.45);
+  box-shadow: -3px 0 0 color-mix(in srgb, var(--sh-accent) 45%, transparent);
+}
 .sh-prose .unlinked-mention { text-decoration: underline dotted var(--sh-muted); text-underline-offset: 3px; }
-.sh-prose .find-and-replace-result { background: color-mix(in srgb, #f5c542 45%, transparent); }
-.sh-prose .find-and-replace-result-current { background: #f5c542; }
+.sh-prose .find-and-replace-result {
+  background: rgb(245 197 66 / 0.45);
+  background: color-mix(in srgb, #f5c542 45%, transparent);
+}
+.sh-prose .find-and-replace-result-current { background: #f5c542; color: #1d1d22; }
 .sh-prose .tiptap-mathematics-render { cursor: pointer; }
 
 /* ── Links and references ────────────────────────────────────────────────── */
 .sh-wikilink, .sh-fragment-link { color: var(--sh-link); cursor: pointer; }
 .sh-wikilink-label, .sh-fragment-link span { color: var(--sh-link); cursor: pointer; border-radius: 3px; }
-.sh-wikilink-label:hover, .sh-fragment-link span:hover { background: color-mix(in srgb, var(--sh-accent) 12%, transparent); }
+.sh-wikilink-label:hover, .sh-fragment-link span:hover {
+  background: rgb(122 162 247 / 0.12);
+  background: color-mix(in srgb, var(--sh-accent) 12%, transparent);
+}
 .sh-wikilink-input { font: inherit; border: 1px solid var(--sh-accent); border-radius: 3px; padding: 0 3px; }
 .sh-blockref { display: block; border-left: 3px solid var(--sh-accent); background: var(--sh-bg-raised); border-radius: var(--sh-radius); padding: 6px 10px; }
 .sh-blockref.is-missing { border-left-color: var(--sh-muted); }
@@ -82,7 +106,11 @@
 .sh-tb-btn { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
 .sh-tb-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
 /* `.is-active` also covers the `aria-pressed="true"` state on the same button — Toolbar sets both together. */
-.sh-tb-btn.is-active { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 12%, transparent); }
+.sh-tb-btn.is-active {
+  color: var(--sh-accent);
+  background: rgb(122 162 247 / 0.12);
+  background: color-mix(in srgb, var(--sh-accent) 12%, transparent);
+}
 .sh-tb-sep { width: 1px; background: var(--sh-border); margin: 4px 4px; }
 .sh-bubble { display: flex; gap: 2px; background: var(--sh-bg); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 2px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); }
 .sh-bubble button { border: 0; background: none; min-width: 26px; height: 26px; border-radius: 4px; cursor: pointer; color: var(--sh-text); }
@@ -124,7 +152,7 @@
 .sh-math-preview { min-height: 32px; overflow-x: auto; }
 .sh-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; }
 .sh-dialog-actions button { border: 1px solid var(--sh-border); background: none; border-radius: 5px; padding: 4px 10px; cursor: pointer; color: inherit; }
-.sh-dialog-actions .is-primary { background: var(--sh-accent); border-color: var(--sh-accent); color: #fff; }
+.sh-dialog-actions .is-primary { background: var(--sh-accent); border-color: var(--sh-accent); color: var(--sh-on-accent); }
 .sh-findbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; align-items: center; padding: 4px 6px; margin-bottom: 6px; }
 .sh-findbar input { border: 1px solid var(--sh-border); border-radius: 4px; padding: 2px 6px; background: var(--sh-bg-raised); color: inherit; min-width: 0; }
 .sh-findbar button { border: 0; background: none; cursor: pointer; color: var(--sh-muted); padding: 2px 6px; border-radius: 4px; }
