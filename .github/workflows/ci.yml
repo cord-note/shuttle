@@ -24,6 +24,8 @@ jobs:
 
       # The test suite runs on bun's test runner.
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck

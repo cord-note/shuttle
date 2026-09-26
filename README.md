@@ -52,7 +52,7 @@ To install from there, add this to your project's `.npmrc`:
 and authenticate with a GitHub token that has the `read:packages` scope (GitHub
 Packages requires a token even for public packages). Then
 `npm install @alexander-288/shuttle` and import from `@alexander-288/shuttle` instead of
-`shuttle-editor`.
+`shuttle-editor` — including the stylesheet, `import '@alexander-288/shuttle/styles.css'`.
 
 ## Quick start
 
@@ -111,7 +111,8 @@ export function Notes() {
 
 To try the editor before writing a host, use the built-in fake: `createFakeHost()`
 returns an in-memory `ShuttleHost` with three sample notes that records every call
-(`host.calls`). You can pass your own `notes`, `blocks` and `resolved` blocks.
+(`host.calls`). You can pass your own `notes`, `blocks` and `resolved` blocks, typed as
+`FakeHostOptions`.
 
 ```tsx
 import { ShuttleEditor, createFakeHost } from 'shuttle-editor';
@@ -308,9 +309,13 @@ JSON keeps all of them.
 
 ## Try it
 
+The repository uses pnpm 11 (pinned in `package.json`); `corepack enable` installs the
+right version for you.
+
 ```bash
 git clone https://github.com/Alexander-288/shuttle.git
 cd shuttle
+corepack enable
 pnpm install
 pnpm playground
 ```
@@ -322,7 +327,9 @@ Then open http://localhost:5199 — the playground runs the editor against
 
 ## License
 
+Copyright (C) 2026 Aleksander Sprengel
+
 [AGPL-3.0-or-later](./LICENSE). If you ship an app that includes Shuttle — including
 a web app people use over a network, which the AGPL treats the same as distributing
 it — you must make that app's complete source code available to its users under the
-AGPL.
+AGPL. This summary is not legal advice.

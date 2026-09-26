@@ -20,7 +20,7 @@ export interface ShuttleUiEvents {
 export interface ShuttleContext {
   host: ShuttleHost;
   events: ShuttleUiEvents;
-  /** Identity of the loaded document (Cord: the note id). */
+  /** Identity of the loaded document, for example your note id. */
   docKey: string;
 }
 

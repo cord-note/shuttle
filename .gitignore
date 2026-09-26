@@ -5,3 +5,4 @@ dist/
 playground/dist/
 .tmp/
 *.tgz
+.npmrc

@@ -14,5 +14,5 @@ export { topLevelAt, blockIdAt } from './doc/topLevel';
 export { toStoredJson } from './doc/persist';
 export { UNLINKED_REFRESH_META } from './custom/unlinkedMentions';
 export type { FragmentLinkAttrs } from './custom/links/fragmentLink';
-export { createFakeHost, type FakeHost } from './testing/fakeHost';
+export { createFakeHost, type FakeHost, type FakeHostOptions } from './testing/fakeHost';
 export type { Editor, JSONContent } from '@tiptap/core';

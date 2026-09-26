@@ -2,6 +2,10 @@ name: Release
 
 # Pushing a tag such as `v0.1.0` publishes that version to npm and GitHub
 # Packages and creates a GitHub release with the packed tarball attached.
+# A version with a prerelease suffix (`v0.2.0-beta.1`) is published under the
+# `next` dist-tag and marked as a prerelease on GitHub; anything else goes to
+# `latest`. Re-running the workflow for a version that is already on a
+# registry skips that publish instead of failing.
 on:
   push:
     tags: ['v*']
@@ -20,6 +24,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
       - run: pnpm install --frozen-lockfile
 
       - name: Check the tag matches package.json
@@ -40,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # npm provenance
+      id-token: write # npm provenance; requires the repository to be public
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -50,13 +56,27 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
-      # `prepack` builds dist/ before the tarball is made. NPM_TOKEN is a
-      # repository secret (an npm automation token) the owner must add under
-      # Settings > Secrets and variables > Actions.
-      - run: pnpm publish --no-git-checks --access public --provenance
+      # NPM_TOKEN is a repository secret the owner must add under Settings >
+      # Secrets and variables > Actions. Use an npm *granular access token*
+      # with read and write (publish) access to `shuttle-editor`, an expiry
+      # date, and "bypass 2FA" enabled if the npm account requires 2FA. Once
+      # the package exists on npm, replace the token with npm Trusted
+      # Publishing (OIDC), which needs no stored secret.
+      #
+      # `--provenance` only works from a public repository. `prepack` builds
+      # dist/ before the tarball is made. The auth line is written to this
+      # checkout's own .npmrc (never committed) so pnpm and `npm view` both
+      # read it; npm expands ${NODE_AUTH_TOKEN} from the environment.
+      - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          npm view "$NAME@$VERSION" version --registry https://registry.npmjs.org >/dev/null 2>&1 && { echo "$NAME@$VERSION already published to npm"; exit 0; }
+          tag=latest; case "$VERSION" in *-*) tag=next;; esac
+          pnpm publish --no-git-checks --access public --provenance --tag "$tag"
 
   publish-github:
     needs: verify
@@ -78,9 +98,19 @@ jobs:
       # owner, so the same build is published there as @alexander-288/shuttle.
       # The rename happens only in this job's checkout and is never committed.
       - run: npm pkg set name=@alexander-288/shuttle
-      - run: pnpm publish --no-git-checks --registry https://npm.pkg.github.com
+      # GitHub Packages needs auth even for `npm view`; the .npmrc lines give
+      # both the lookup and the publish the scope's registry and the token.
+      - name: Publish to GitHub Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "@alexander-288:registry=https://npm.pkg.github.com/" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
+          NAME="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          npm view "$NAME@$VERSION" version --registry https://npm.pkg.github.com >/dev/null 2>&1 && { echo "$NAME@$VERSION already published to GitHub Packages"; exit 0; }
+          tag=latest; case "$VERSION" in *-*) tag=next;; esac
+          pnpm publish --no-git-checks --registry https://npm.pkg.github.com --tag "$tag"
 
   github-release:
     needs: [publish-npm, publish-github]
@@ -97,6 +127,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm pack
       - name: Create the GitHub release
-        run: gh release create "$GITHUB_REF_NAME" *.tgz --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          set --
+          case "$VERSION" in *-*) set -- --prerelease;; esac
+          gh release create "$GITHUB_REF_NAME" *.tgz --title "$GITHUB_REF_NAME" --generate-notes --verify-tag "$@"

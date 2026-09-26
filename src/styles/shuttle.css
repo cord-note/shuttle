@@ -1,7 +1,7 @@
 /*
- * Shuttle's stylesheet. Colours read host variables first (Cord's --accent,
- * --bg-*, --text-*), then fall back to neutral defaults, so the package looks
- * right in Cord and standalone.
+ * Shuttle's stylesheet. Colours read the host page's CSS variables (--accent,
+ * --bg-*, --text-*, --border, --link-color, --editor-font-size) first, then fall
+ * back to a neutral light theme.
  */
 @import 'katex/dist/katex.min.css';
 
