@@ -1,4 +1,71 @@
-/** Placeholder until the real UI lands; renders nothing. */
-export function SelectionBubble(_props: { [key: string]: unknown }): null {
-  return null;
+import { useRef, useState } from 'react';
+import type { Editor } from '@tiptap/core';
+import { BubbleMenu } from '@tiptap/react/menus';
+import { Link2, Unlink } from 'lucide-react';
+
+/** Formatting and link editing over a text selection. */
+export function SelectionBubble({ editor }: { editor: Editor }) {
+  const [editingLink, setEditingLink] = useState(false);
+  const [href, setHref] = useState('');
+  // Escape cancels; the blur that follows unmounting the input must not apply.
+  const cancelled = useRef(false);
+
+  const applyLink = (): void => {
+    if (cancelled.current) { cancelled.current = false; return; }
+    const url = href.trim();
+    if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    else editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    setEditingLink(false);
+  };
+
+  return (
+    <BubbleMenu
+      editor={editor}
+      className="sh-bubble"
+      shouldShow={({ editor: e, from, to }) => from !== to && e.isEditable && !e.isActive('codeBlock')}
+    >
+      {editingLink ? (
+        <input
+          autoFocus
+          className="sh-bubble-input"
+          placeholder="https://…"
+          value={href}
+          onChange={(e) => setHref(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); applyLink(); }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              cancelled.current = true;
+              setEditingLink(false);
+              editor.commands.focus();
+            }
+          }}
+          onBlur={applyLink}
+        />
+      ) : (
+        <>
+          <button type="button" title="Bold" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}><strong>B</strong></button>
+          <button type="button" title="Italic" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}><em>I</em></button>
+          <button type="button" title="Highlight" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHighlight().run(); }}>==</button>
+          <button
+            type="button"
+            title="Link"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              cancelled.current = false;
+              setHref(String(editor.getAttributes('link')['href'] ?? ''));
+              setEditingLink(true);
+            }}
+          >
+            <Link2 size={13} strokeWidth={1.75} />
+          </button>
+          {editor.isActive('link') && (
+            <button type="button" title="Remove link" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetLink().run(); }}>
+              <Unlink size={13} strokeWidth={1.75} />
+            </button>
+          )}
+        </>
+      )}
+    </BubbleMenu>
+  );
 }
