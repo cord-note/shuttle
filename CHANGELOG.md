@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.2
+
+- The slash menu and `[[` autocomplete follow the caret when the page or a host's
+  scroll container scrolls, hide while the caret is out of view, and flip above it
+  based on their real height.
+- The formula editor opens as a popover under the formula instead of a box in the
+  middle of the window, follows it while scrolling, and closes on an outside click.
+- The formatting toolbar stays in view (`position: sticky`) while the document scrolls.
+- Task checkboxes are drawn from the theme (`--accent`, `--text-muted`), so they
+  match light and dark themes instead of showing the native control.
+- New `spellCheck` prop to turn the browser's spell checking on or off.
+
 ## 0.2.1
 
 - The editor's commands are typed for hosts. The published declarations now include
