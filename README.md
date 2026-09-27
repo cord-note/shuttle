@@ -137,6 +137,7 @@ const host = createFakeHost();
 | `placeholder` | `string` | Optional. Text shown in an empty document. Default `Start writing… or type / for commands`. |
 | `twitchParent` | `string` | Optional. Your page's hostname, which Twitch embeds require. Default `window.location.hostname`. |
 | `colorScheme` | `'light' \| 'dark' \| 'auto'` | Optional. Palette for code highlighting; `auto` follows the system. Pass your app's scheme if it has its own switch. Default `'auto'`. |
+| `spellCheck` | `boolean` | Optional. Turns the browser's spell checking on or off for the document. Omitted, the browser decides (usually on). |
 | `twitch` | `boolean` | Optional. `false` stops pasted Twitch links from becoming embeds (use it where Twitch can't play, such as desktop shells). Stored embeds still load. Default `true`. |
 | `className` | `string` | Optional. Extra class on the root element (`.sh-root`). |
 | `children` | `ReactNode` | Optional. Rendered inside the content area, for overlays positioned against the document. |
@@ -243,7 +244,7 @@ The stylesheet reads your CSS variables and falls back to a neutral light theme:
 | `--text-muted` | Placeholders, secondary text | `#8a8a94` |
 | `--link-color` | Links and wiki links | `--accent` |
 | `--editor-font-size` | Base font size | `15px` |
-| `--font-mono` | Inline code and code blocks | `ui-monospace, �, monospace` |
+| `--font-mono` | Inline code and code blocks | `ui-monospace, …, monospace` |
 
 ```css
 :root[data-theme='dark'] {
