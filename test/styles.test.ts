@@ -214,3 +214,14 @@ describe('shuttle.css ruler visibility', () => {
     expect(css).toMatch(/\.sh-ruler-handle:focus-visible[^{]*\{[^}]*opacity:\s*1/);
   });
 });
+
+describe('shuttle.css ruler handles', () => {
+  const css = readFileSync(CSS_PATH, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  it('draws the handles heavier than the ticks', () => {
+    const handle = /\.sh-ruler-handle \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    const px = (prop: string): number => Number(new RegExp(`(?:^|[;\\s])${prop}:\\s*([\\d.]+)px`).exec(handle)?.[1] ?? 0);
+    expect(px('width')).toBeGreaterThan(1);
+    expect(px('height')).toBeGreaterThan(5);
+    expect(handle).toMatch(/background:\s*var\(--sh-text\)/);
+  });
+});

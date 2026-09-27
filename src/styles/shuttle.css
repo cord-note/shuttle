@@ -131,8 +131,10 @@
   background: var(--sh-accent); opacity: 0; transition: opacity 0.15s;
 }
 .sh-ruler-handle {
-  position: absolute; top: 0; width: 2px; height: 7px; border-radius: 1px;
-  background: var(--sh-muted); opacity: 0; cursor: ew-resize;
+  /* Thicker, taller and brighter than the ticks (1px, at most 5px, muted), so
+     the column's edges read at a glance once the ruler is shown. */
+  position: absolute; top: 0; width: 3px; height: 9px; border-radius: 1.5px;
+  background: var(--sh-text); opacity: 0; cursor: ew-resize;
   transition: opacity 0.15s, background 0.15s;
 }
 /* A wider, invisible grab area than the 2px mark. */
