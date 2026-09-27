@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+- `shuttle-editor/doc`: a React-free entry for servers and workers, with `nodeText`,
+  `topLevelBlocks`, `wikiLinkTargets`, `fragmentLinkIds` and `findTopLevelBlock` over
+  stored documents.
+- Built-in light and dark code highlighting. The new `colorScheme` prop
+  (`'light' | 'dark' | 'auto'`) picks the palette, and the `--sh-code-*` variables
+  override its colours. Code uses `--font-mono`.
+- `onReady` also receives `ShuttleControls` (`openRefPicker`, `openFind`, `pickImage`),
+  so hosts can open Shuttle's dialogs from their own menus.
+- The `twitch` prop: `false` stops pasted Twitch links from becoming embeds, while stored
+  embeds still load.
+- CI uses `actions/checkout@v5` and `actions/setup-node@v5`.
+
 ## 0.1.0
 
 First public release, published to npm as `shuttle-editor` and to GitHub Packages as
