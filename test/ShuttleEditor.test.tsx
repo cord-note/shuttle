@@ -278,4 +278,19 @@ describe('ShuttleEditor', () => {
     root = null;
     expect(calls.at(-1)).toEqual([null, null]);
   });
+
+  it('marks the root with an explicit colour scheme', () => {
+    const h = mount({ colorScheme: 'dark' });
+    const root = (): Element | null => container!.querySelector('.sh-root');
+    expect(root()?.getAttribute('data-sh-scheme')).toBe('dark');
+    h.render({ colorScheme: 'light' });
+    expect(root()?.getAttribute('data-sh-scheme')).toBe('light');
+    h.render({ colorScheme: 'auto' });
+    expect(root()?.hasAttribute('data-sh-scheme')).toBe(false);
+  });
+
+  it('follows the system scheme by default', () => {
+    mount({});
+    expect(container!.querySelector('.sh-root')?.hasAttribute('data-sh-scheme')).toBe(false);
+  });
 });

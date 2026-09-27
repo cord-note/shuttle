@@ -55,6 +55,11 @@ export interface ShuttleEditorProps {
   twitchParent?: string;
   /** False stops pasted Twitch links from becoming embeds. Defaults to true. */
   twitch?: boolean;
+  /**
+   * Palette for code highlighting. `auto` (the default) follows the system's
+   * `prefers-color-scheme`; pass `light` or `dark` to match your app's theme.
+   */
+  colorScheme?: 'light' | 'dark' | 'auto';
   className?: string;
   /** Host overlays rendered inside the content area. */
   children?: ReactNode;
@@ -87,7 +92,7 @@ const toSaved = (editor: Editor): JSONContent => toStoredJson(stripPendingUpload
 
 export function ShuttleEditor(props: ShuttleEditorProps) {
   const {
-    docKey, doc, mode, host, toolbar = true, outline = false, placeholder, twitch = true, className, children,
+    docKey, doc, mode, host, toolbar = true, outline = false, placeholder, twitch = true, colorScheme = 'auto', className, children,
   } = props;
   const twitchParent = props.twitchParent
     ?? (typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost');
@@ -244,7 +249,10 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   const editable = editor !== null && !legacy;
 
   return (
-    <div className={`sh-root sh-mode-${mode}${className ? ` ${className}` : ''}`}>
+    <div
+      className={`sh-root sh-mode-${mode}${className ? ` ${className}` : ''}`}
+      data-sh-scheme={colorScheme === 'auto' ? undefined : colorScheme}
+    >
       {legacy && (
         <div className="sh-legacy" role="status">
           This note uses an older format and is read-only.

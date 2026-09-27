@@ -20,6 +20,64 @@
   --sh-on-accent: var(--on-accent, #fff);
   --sh-radius: 6px;
   --sh-font-size: var(--editor-font-size, 15px);
+  --sh-mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* Code highlighting. CodeBlockLowlight emits highlight.js `hljs-*` classes;
+   these colour them (GitHub's light and dark palettes). The scheme follows the
+   system unless the `colorScheme` prop sets `data-sh-scheme`. Hosts may
+   override any `--sh-code-*` variable. */
+.sh-root {
+  --sh-code-keyword: #cf222e;
+  --sh-code-string: #0a3069;
+  --sh-code-comment: #6e7781;
+  --sh-code-number: #0550ae;
+  --sh-code-function: #8250df;
+  --sh-code-builtin: #953800;
+  --sh-code-type: #953800;
+  --sh-code-attr: #0550ae;
+  --sh-code-variable: #953800;
+  --sh-code-meta: #0550ae;
+  --sh-code-tag: #116329;
+  --sh-code-operator: #24292f;
+  --sh-code-addition: #116329;
+  --sh-code-deletion: #82071e;
+}
+
+.sh-root[data-sh-scheme='dark'] {
+  --sh-code-keyword: #ff7b72;
+  --sh-code-string: #a5d6ff;
+  --sh-code-comment: #8b949e;
+  --sh-code-number: #79c0ff;
+  --sh-code-function: #d2a8ff;
+  --sh-code-builtin: #ffa657;
+  --sh-code-type: #ffa657;
+  --sh-code-attr: #79c0ff;
+  --sh-code-variable: #ffa657;
+  --sh-code-meta: #79c0ff;
+  --sh-code-tag: #7ee787;
+  --sh-code-operator: #c9d1d9;
+  --sh-code-addition: #aff5b4;
+  --sh-code-deletion: #ffdcd7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sh-root:not([data-sh-scheme='light']) {
+    --sh-code-keyword: #ff7b72;
+    --sh-code-string: #a5d6ff;
+    --sh-code-comment: #8b949e;
+    --sh-code-number: #79c0ff;
+    --sh-code-function: #d2a8ff;
+    --sh-code-builtin: #ffa657;
+    --sh-code-type: #ffa657;
+    --sh-code-attr: #79c0ff;
+    --sh-code-variable: #ffa657;
+    --sh-code-meta: #79c0ff;
+    --sh-code-tag: #7ee787;
+    --sh-code-operator: #c9d1d9;
+    --sh-code-addition: #aff5b4;
+    --sh-code-deletion: #ffdcd7;
+  }
 }
 
 .sh-root {
@@ -58,9 +116,39 @@
 .sh-prose h2 { font-size: 1.4em; font-weight: 650; }
 .sh-prose h3 { font-size: 1.15em; font-weight: 600; }
 .sh-prose blockquote { border-left: 3px solid var(--sh-border); padding-left: 12px; color: var(--sh-muted); }
+.sh-prose code, .sh-prose pre { font-family: var(--sh-mono); }
 .sh-prose code { background: var(--sh-bg-raised); border-radius: 4px; padding: 0.1em 0.35em; font-size: 0.9em; }
 .sh-prose pre { background: var(--sh-bg-raised); border-radius: var(--sh-radius); padding: 10px 12px; overflow-x: auto; }
 .sh-prose pre code { background: none; padding: 0; }
+
+.sh-prose pre .hljs-keyword, .sh-prose pre .hljs-literal, .sh-prose pre .hljs-selector-tag,
+.sh-prose pre .hljs-section, .sh-prose pre .hljs-doctag { color: var(--sh-code-keyword); }
+.sh-prose pre .hljs-string, .sh-prose pre .hljs-regexp, .sh-prose pre .hljs-template-string { color: var(--sh-code-string); }
+.sh-prose pre .hljs-comment, .sh-prose pre .hljs-quote { color: var(--sh-code-comment); font-style: italic; }
+.sh-prose pre .hljs-number, .sh-prose pre .hljs-bullet, .sh-prose pre .hljs-symbol { color: var(--sh-code-number); }
+.sh-prose pre .hljs-title, .sh-prose pre .hljs-title.function_,
+.sh-prose pre .hljs-function .hljs-title { color: var(--sh-code-function); }
+.sh-prose pre .hljs-built_in, .sh-prose pre .hljs-selector-id { color: var(--sh-code-builtin); }
+.sh-prose pre .hljs-type, .sh-prose pre .hljs-title.class_,
+.sh-prose pre .hljs-class .hljs-title { color: var(--sh-code-type); }
+.sh-prose pre .hljs-attr, .sh-prose pre .hljs-attribute, .sh-prose pre .hljs-property,
+.sh-prose pre .hljs-selector-attr, .sh-prose pre .hljs-selector-class { color: var(--sh-code-attr); }
+.sh-prose pre .hljs-variable, .sh-prose pre .hljs-template-variable, .sh-prose pre .hljs-params { color: var(--sh-code-variable); }
+.sh-prose pre .hljs-meta { color: var(--sh-code-meta); }
+.sh-prose pre .hljs-tag, .sh-prose pre .hljs-name { color: var(--sh-code-tag); }
+.sh-prose pre .hljs-operator, .sh-prose pre .hljs-punctuation { color: var(--sh-code-operator); }
+.sh-prose pre .hljs-addition {
+  color: var(--sh-code-addition);
+  background: rgb(46 160 67 / 0.15);
+  background: color-mix(in srgb, var(--sh-code-addition) 15%, transparent);
+}
+.sh-prose pre .hljs-deletion {
+  color: var(--sh-code-deletion);
+  background: rgb(248 81 73 / 0.15);
+  background: color-mix(in srgb, var(--sh-code-deletion) 15%, transparent);
+}
+.sh-prose pre .hljs-emphasis { font-style: italic; }
+.sh-prose pre .hljs-strong { font-weight: 600; }
 .sh-prose mark {
   background: rgb(122 162 247 / 0.3);
   background: color-mix(in srgb, var(--sh-accent) 30%, transparent);

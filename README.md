@@ -136,6 +136,7 @@ const host = createFakeHost();
 | `outline` | `boolean` | Optional. Show the heading outline panel. Default `false`. |
 | `placeholder` | `string` | Optional. Text shown in an empty document. Default `Start writingâ€¦ or type / for commands`. |
 | `twitchParent` | `string` | Optional. Your page's hostname, which Twitch embeds require. Default `window.location.hostname`. |
+| `colorScheme` | `'light' \| 'dark' \| 'auto'` | Optional. Palette for code highlighting; `auto` follows the system. Pass your app's scheme if it has its own switch. Default `'auto'`. |
 | `twitch` | `boolean` | Optional. `false` stops pasted Twitch links from becoming embeds (use it where Twitch can't play, such as desktop shells). Stored embeds still load. Default `true`. |
 | `className` | `string` | Optional. Extra class on the root element (`.sh-root`). |
 | `children` | `ReactNode` | Optional. Rendered inside the content area, for overlays positioned against the document. |
@@ -242,6 +243,7 @@ The stylesheet reads your CSS variables and falls back to a neutral light theme:
 | `--text-muted` | Placeholders, secondary text | `#8a8a94` |
 | `--link-color` | Links and wiki links | `--accent` |
 | `--editor-font-size` | Base font size | `15px` |
+| `--font-mono` | Inline code and code blocks | `ui-monospace, …, monospace` |
 
 ```css
 :root[data-theme='dark'] {
@@ -254,6 +256,16 @@ The stylesheet reads your CSS variables and falls back to a neutral light theme:
   --editor-font-size: 16px;
 }
 ```
+
+### Code highlighting
+
+Code blocks are highlighted by Shuttle itself (lowlight tokens, coloured by a built-in
+GitHub-style light and dark palette), so you don't need a highlight.js theme. The
+palette follows the system's `prefers-color-scheme`; if your app has its own light/dark
+switch, pass it as the `colorScheme` prop (`'light' | 'dark' | 'auto'`). To change the
+colours, override any of `--sh-code-keyword`, `-string`, `-comment`, `-number`,
+`-function`, `-builtin`, `-type`, `-attr`, `-variable`, `-meta`, `-tag`, `-operator`,
+`-addition` and `-deletion` on `.sh-root`.
 
 `shuttle-editor/styles.css` imports KaTeX's stylesheet itself, so math renders without
 extra setup (your bundler needs to resolve CSS `@import`, as Vite, webpack and Next.js

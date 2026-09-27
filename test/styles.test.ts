@@ -131,3 +131,39 @@ describe('shuttle.css stacked children in containers', () => {
     expect(list).toMatch(/\bth\b/);
   });
 });
+
+describe('shuttle.css code highlighting', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  const TOKENS = ['keyword', 'string', 'comment', 'number', 'function', 'builtin', 'type', 'attr', 'variable',
+    'meta', 'tag', 'operator', 'addition', 'deletion'];
+  const rules = (): { selector: string; body: string }[] =>
+    [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ selector: (m[1] ?? '').trim(), body: m[2] ?? '' }));
+  const declares = (selectorTest: (s: string) => boolean, variable: string): boolean =>
+    rules().some((r) => selectorTest(r.selector) && new RegExp(`${variable}\s*:`).test(r.body));
+
+  it('defines a light palette on .sh-root', () => {
+    for (const t of TOKENS) {
+      expect(declares((s) => s.split(',').map((x) => x.trim()).includes('.sh-root'), `--sh-code-${t}`)).toBe(true);
+    }
+  });
+
+  it('redefines it for an explicit dark scheme and for the system dark preference', () => {
+    const media = /@media \(prefers-color-scheme: dark\)\s*\{\s*\.sh-root:not\(\[data-sh-scheme='light'\]\)\s*\{([^}]*)\}/.exec(css);
+    expect(media).not.toBeNull();
+    for (const t of TOKENS) {
+      expect(declares((s) => s === ".sh-root[data-sh-scheme='dark']", `--sh-code-${t}`)).toBe(true);
+      expect(media![1]).toMatch(new RegExp(`--sh-code-${t}\s*:`));
+    }
+  });
+
+  it('colours highlight.js tokens inside code blocks from the palette', () => {
+    for (const t of TOKENS) {
+      expect(rules().some((r) => r.selector.includes('.sh-prose pre .hljs-') && r.body.includes(`var(--sh-code-${t})`))).toBe(true);
+    }
+  });
+
+  it('sets code in the monospace font', () => {
+    expect(css).toMatch(/--sh-mono\s*:/);
+    expect(rules().some((r) => r.selector.includes('.sh-prose code') && r.body.includes('font-family: var(--sh-mono)'))).toBe(true);
+  });
+});
