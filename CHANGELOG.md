@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+- The editor's commands are typed for hosts. The published declarations now include
+  Shuttle's own commands (`moveBlock`, `duplicateBlock`, `deleteBlock`, `turnInto`,
+  `insertBlockRef` and the math commands) and every official extension's
+  (`toggleBold`, `toggleHeading`, `toggleTaskList`, `toggleHighlight`, …), so code
+  using the `Editor` from `onReady` typechecks.
+- New type exports: `BlockRefAttrs`, `BlockMathAlign`, `TurnIntoType`.
+
 ## 0.2.0
 
 - `shuttle-editor/doc`: a React-free entry for servers and workers, with `nodeText`,
