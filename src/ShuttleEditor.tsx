@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
 import type { TableOfContentData } from '@tiptap/extension-table-of-contents';
 import { buildExtensions } from './extensions';
 import type { MathEditRequest, ShuttleContextRef, ShuttleUiEvents } from './context';
-import type { ShuttleHost, ShuttleMode } from './host';
+import type { BlockSummary, NoteRef, ShuttleHost, ShuttleMode } from './host';
 import { guardHost } from './guardHost';
 import { collectFragmentLinkIds, collectMentionTargets, diffSets } from './doc/tracking';
 import { EMPTY_DOC, isValidDoc } from './doc/validate';
@@ -22,12 +22,32 @@ import { MathAlignToggle } from './ui/MathAlignToggle';
 import { FindBar } from './ui/FindBar';
 import { Outline } from './ui/Outline';
 
+export interface PickerOptions {
+  /** The picker's label, e.g. "Link to note". */
+  title?: string;
+}
+
+export interface PickedBlock {
+  note: NoteRef;
+  block: BlockSummary;
+}
+
 /** Opens Shuttle's own dialogs from outside the editor (command bars, menus). */
 export interface ShuttleControls {
   openRefPicker(): void;
   openFind(): void;
   pickImage(): void;
+  /** Shuttle's note picker; resolves with the chosen note, or null if dismissed. */
+  pickNote(options?: PickerOptions): Promise<NoteRef | null>;
+  /** The same picker, going on to one of the note's blocks. Null if dismissed. */
+  pickBlock(options?: PickerOptions): Promise<PickedBlock | null>;
 }
+
+/** What the open picker is for: a transclusion, or a host's pick awaiting its answer. */
+type PickerState =
+  | { kind: 'blockRef' }
+  | { kind: 'note'; title: string; resolve: (note: NoteRef | null) => void }
+  | { kind: 'block'; title: string; resolve: (picked: PickedBlock | null) => void };
 
 export interface ShuttleEditorProps {
   /** Identity of the document. Changing it loads `doc` and flushes pending edits. */
@@ -100,7 +120,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
     ?? (typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost');
 
   const [legacy, setLegacy] = useState(false);
-  const [refPicker, setRefPicker] = useState(false);
+  const [picker, setPickerState] = useState<PickerState | null>(null);
   const [math, setMath] = useState<MathEditRequest | null>(null);
   const [find, setFind] = useState(false);
   const [toc, setToc] = useState<TableOfContentData>([]);
@@ -111,12 +131,38 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   latest.current = props;
   const legacyRef = useRef(false);
 
+  // A host's pick that is replaced, dismissed or cut short by a document
+  // switch resolves with null, so nothing waits forever.
+  const pickerRef = useRef<PickerState | null>(null);
+  const setPicker = useCallback((next: PickerState | null): void => {
+    const current = pickerRef.current;
+    if (current && current.kind !== 'blockRef') current.resolve(null);
+    pickerRef.current = next;
+    setPickerState(next);
+  }, []);
+  const settlePicker = useCallback((): void => {
+    pickerRef.current = null;
+    setPickerState(null);
+  }, []);
+
   const events = useMemo<ShuttleUiEvents>(() => ({
-    openRefPicker: () => setRefPicker(true),
+    openRefPicker: () => setPicker({ kind: 'blockRef' }),
     editMath: (req) => setMath(req),
     openFind: () => setFind(true),
     pickImage: () => fileInput.current?.click(),
-  }), []);
+  }), [setPicker]);
+
+  const controls = useMemo<ShuttleControls>(() => ({
+    openRefPicker: events.openRefPicker,
+    openFind: events.openFind,
+    pickImage: events.pickImage,
+    pickNote: (options) => new Promise((resolve) => {
+      setPicker({ kind: 'note', title: options?.title ?? 'Pick a note', resolve });
+    }),
+    pickBlock: (options) => new Promise((resolve) => {
+      setPicker({ kind: 'block', title: options?.title ?? 'Pick a block', resolve });
+    }),
+  }), [events, setPicker]);
 
   // Every host call goes through the guard, so a throwing host cannot abort
   // a transaction or skip a save.
@@ -225,7 +271,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
     fragments.current = collectFragmentLinkIds(editor.state.doc);
     reportStats(editor);
     if (!rebuilt) {
-      setRefPicker(false);
+      setPicker(null);
       setMath(null);
       setFind(false);
     }
@@ -251,9 +297,12 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   }, [host, editor]);
 
   useEffect(() => {
-    latest.current.onReady?.(editor, editor ? events : null);
+    latest.current.onReady?.(editor, editor ? controls : null);
     return () => latest.current.onReady?.(null, null);
-  }, [editor, events]);
+  }, [editor, controls]);
+
+  // A pick still open when the editor goes away answers null.
+  useEffect(() => () => setPicker(null), [setPicker]);
 
   // Write, never drop, an edit still inside the debounce window.
   useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -280,8 +329,30 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       </div>
       {editor && outline && <Outline items={toc} editor={editor} />}
       {editor && find && <FindBar editor={editor} onClose={() => setFind(false)} />}
-      {editor && refPicker && (
-        <RefPicker editor={editor} ctx={ctx} onClose={() => setRefPicker(false)} />
+      {editor && picker?.kind === 'blockRef' && (
+        <RefPicker
+          ctx={ctx}
+          title="Insert block reference"
+          onBlock={(block) => { editor.chain().focus().insertBlockRef(block.id, block.noteId).run(); setPicker(null); }}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {editor && picker?.kind === 'note' && (
+        <RefPicker
+          ctx={ctx}
+          title={picker.title}
+          onNote={(note) => { picker.resolve(note); settlePicker(); }}
+          onBlock={() => {}}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {editor && picker?.kind === 'block' && (
+        <RefPicker
+          ctx={ctx}
+          title={picker.title}
+          onBlock={(block, note) => { picker.resolve({ note, block }); settlePicker(); }}
+          onClose={() => setPicker(null)}
+        />
       )}
       {editor && math && <MathEditor editor={editor} request={math} onClose={() => setMath(null)} />}
       <input

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Editor } from '@tiptap/core';
 import { ArrowLeft, Search } from 'lucide-react';
 import type { ShuttleContextRef } from '../context';
 import type { BlockSummary, NoteRef } from '../host';
@@ -9,8 +8,22 @@ const TYPE_LABELS: Record<string, string> = {
   youtube: 'YouTube', twitch: 'Twitch', table: 'Table', details: 'Toggle',
 };
 
-/** Two-step picker: a note, then one of its blocks. */
-export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: ShuttleContextRef; onClose: () => void }) {
+export interface RefPickerProps {
+  ctx: ShuttleContextRef;
+  /** Dialog label, e.g. "Insert block reference". */
+  title: string;
+  /** Given, picking a note finishes here; otherwise the picker goes on to its blocks. */
+  onNote?: (note: NoteRef) => void;
+  onBlock: (block: BlockSummary, note: NoteRef) => void;
+  onClose: () => void;
+}
+
+/**
+ * Picks a note, then (unless `onNote` is given) one of its blocks. Used for
+ * transclusions and, through `ShuttleControls`, by hosts for their own links.
+ * The note being edited is never offered.
+ */
+export function RefPicker({ ctx, title, onNote, onBlock, onClose }: RefPickerProps) {
   const [query, setQuery] = useState('');
   const [notes, setNotes] = useState<NoteRef[]>([]);
   const [note, setNote] = useState<NoteRef | null>(null);
@@ -56,7 +69,7 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
 
   return (
     <div className="sh-refpicker" onClick={onClose}>
-      <div className="sh-refpicker-panel" ref={panel} role="dialog" aria-modal="true" aria-label="Insert block reference" onClick={(e) => e.stopPropagation()}>
+      <div className="sh-refpicker-panel" ref={panel} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         {note === null ? (
           <>
             <div className="sh-refpicker-search">
@@ -65,7 +78,7 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
             </div>
             <div className="sh-refpicker-list">
               {notes.length === 0 ? <p className="sh-refpicker-empty">No other notes</p> : notes.map((n) => (
-                <button type="button" key={n.id} className="sh-refpicker-row" onClick={() => setNote(n)}>{n.title || 'Untitled'}</button>
+                <button type="button" key={n.id} className="sh-refpicker-row" onClick={() => (onNote ? onNote(n) : setNote(n))}>{n.title || 'Untitled'}</button>
               ))}
             </div>
           </>
@@ -83,7 +96,7 @@ export function RefPicker({ editor, ctx, onClose }: { editor: Editor; ctx: Shutt
                     type="button"
                     key={b.id}
                     className="sh-refpicker-row"
-                    onClick={() => { editor.chain().focus().insertBlockRef(b.id, b.noteId).run(); onClose(); }}
+                    onClick={() => onBlock(b, note)}
                   >
                     <span>{b.text || TYPE_LABELS[b.type] || b.type}</span>
                     <span className="sh-refpicker-meta">{b.type === 'heading' ? `h${b.level ?? ''}` : b.type}</span>

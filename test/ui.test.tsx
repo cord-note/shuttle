@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'bun:test';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { Editor, JSONContent } from '@tiptap/core';
-import { ShuttleEditor, type ShuttleEditorProps } from '../src/ShuttleEditor';
+import { ShuttleEditor, type ShuttleControls, type ShuttleEditorProps } from '../src/ShuttleEditor';
 import { createFakeHost } from '../src/testing/fakeHost';
 import { MathEditor } from '../src/ui/MathEditor';
 import { BlockMenu } from '../src/ui/BlockMenu';
@@ -419,5 +419,63 @@ describe('math align toggle from the keyboard', () => {
     act(() => { editor().commands.setNodeSelection(2); });
     act(() => { editor().setEditable(false); });
     expect(container.querySelector('.sh-math-align')).toBeNull();
+  });
+});
+
+describe('pickers for hosts', () => {
+  function mountWithControls() {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    let controls: ShuttleControls | null = null;
+    const host = createFakeHost({
+      notes: [{ id: 'n-self', title: 'Self' }, { id: 'n-beta', title: 'Beta' }],
+      blocks: [
+        { id: 'b1', noteId: 'n-beta', type: 'paragraph', text: 'beta block', level: null },
+        { id: 'n-beta:1', noteId: 'n-beta', type: 'bulletList', text: 'synthetic', level: null },
+      ],
+    });
+    act(() => root!.render(
+      <ShuttleEditor docKey="n-self" doc={null} mode="note" host={host} onChange={() => {}} onReady={(_e, c) => { controls = c; }} />,
+    ));
+    return { container, controls: () => controls! };
+  }
+  const rows = (c: ParentNode): HTMLButtonElement[] => [...c.querySelectorAll<HTMLButtonElement>('.sh-refpicker-row')];
+
+  it('pickNote shows the picker with its title and resolves with the chosen note', async () => {
+    const { container, controls } = mountWithControls();
+    let picked: unknown = 'pending';
+    act(() => { void controls().pickNote({ title: 'Link to note' }).then((n) => { picked = n; }); });
+    await act(async () => { await sleep(5); });
+    expect(container.querySelector('.sh-refpicker-panel')?.getAttribute('aria-label')).toBe('Link to note');
+    // The note being edited is never offered.
+    expect(rows(container).map((r) => r.textContent)).toEqual(['Beta']);
+    await act(async () => { rows(container)[0]!.click(); await sleep(0); });
+    expect(picked).toEqual({ id: 'n-beta', title: 'Beta' });
+    expect(container.querySelector('.sh-refpicker')).toBeNull();
+  });
+
+  it('pickBlock goes note then block and resolves with both; synthetic blocks are not offered', async () => {
+    const { container, controls } = mountWithControls();
+    let picked: unknown = 'pending';
+    act(() => { void controls().pickBlock({ title: 'Link to block' }).then((r) => { picked = r; }); });
+    await act(async () => { await sleep(5); });
+    act(() => { rows(container)[0]!.click(); });
+    await act(async () => { await sleep(5); });
+    expect(rows(container).map((r) => r.textContent)).toEqual(['beta blockparagraph']);
+    await act(async () => { rows(container)[0]!.click(); await sleep(0); });
+    expect(picked).toEqual({
+      note: { id: 'n-beta', title: 'Beta' },
+      block: { id: 'b1', noteId: 'n-beta', type: 'paragraph', text: 'beta block', level: null },
+    });
+  });
+
+  it('resolves with null when dismissed', async () => {
+    const { container, controls } = mountWithControls();
+    let picked: unknown = 'pending';
+    act(() => { void controls().pickNote().then((n) => { picked = n; }); });
+    await act(async () => { await sleep(5); });
+    await act(async () => { (container.querySelector('.sh-refpicker') as HTMLElement).click(); await sleep(0); });
+    expect(picked).toBeNull();
   });
 });
