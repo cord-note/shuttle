@@ -27,6 +27,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./doc": "./src/doc-core/index.ts",
     "./styles.css": "./src/styles/shuttle.css"
   },
   "files": [
@@ -48,6 +49,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
+      },
+      "./doc": {
+        "types": "./dist/doc.d.ts",
+        "import": "./dist/doc.js"
       },
       "./styles.css": "./dist/styles.css",
       "./package.json": "./package.json"

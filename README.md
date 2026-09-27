@@ -210,6 +210,23 @@ store.
 - `EMPTY_DOC` is an empty document; `toStoredJson(json)` is the cleanup applied before
   saving, if you build documents yourself.
 
+### Reading documents on a server
+
+`shuttle-editor/doc` reads stored documents without React, Tiptap or a DOM, so a
+server or worker can index what the editor saves:
+
+```ts
+import { nodeText, topLevelBlocks, wikiLinkTargets } from 'shuttle-editor/doc';
+
+const doc = JSON.parse(storedJson);
+const links = wikiLinkTargets(doc);           // note ids of every [[wiki link]]
+const rows = topLevelBlocks(doc).map((b) => ({ id: b.blockId, text: nodeText(b.node) }));
+```
+
+It also exports `fragmentLinkIds(doc)`, `findTopLevelBlock(doc, blockId)`,
+`BLOCK_TYPES` and `BLOCK_ID_ATTRIBUTE`. `nodeText` includes the text atoms stand for:
+wiki-link labels, formulas and image alt text.
+
 ## Theming
 
 The stylesheet reads your CSS variables and falls back to a neutral light theme:
