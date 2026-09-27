@@ -181,7 +181,14 @@ describe('shuttle.css chrome', () => {
     const header = rule('.sh-header');
     expect(header).toMatch(/position:\s*sticky/);
     expect(header).toMatch(/top:\s*0/);
-    expect(header).toMatch(/background:/);
+    // Only the toolbar is opaque; the ruler strip under it stays clear.
+    expect(header).not.toMatch(/background:/);
+    expect(rule('.sh-toolbar')).toMatch(/background:/);
+  });
+
+  it('draws the ruler only across the column, plus one tick beyond each edge', () => {
+    expect(rule('.sh-ruler-scale')).toMatch(/width:\s*calc\(var\(--sh-line-width\) \+ 2 \* var\(--sh-ruler-tick\)\)/);
+    expect(css).not.toMatch(/\.sh-ruler::before/);
   });
 
   it('centres the toolbar under a host-set column instead of stretching it to the column', () => {

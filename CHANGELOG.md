@@ -3,8 +3,9 @@
 ## 0.3.0
 
 - A margin ruler: new `lineWidth`, `onLineWidthChange` and `lineWidthRange` props.
-  The text sits in a centred column; the toolbar's bottom line becomes a ruler with a
-  handle at each edge (drag or arrow keys) and ticks at the snap widths.
+  The text sits in a centred column, and a ruler under the toolbar spans it (plus one
+  tick each side) with a handle at each edge (drag or arrow keys) and ticks at the
+  snap widths on hover.
 - `ShuttleControls.pickNote()` and `pickBlock()` open the reference picker for a host's
   own links and resolve with the choice, or `null` when dismissed.
 - The slash menu and `[[` autocomplete follow the caret when the page or a host's

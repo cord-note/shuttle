@@ -107,15 +107,18 @@
 }
 .sh-root[data-sh-width].sh-mode-notepad .sh-content { max-width: calc(var(--sh-line-width) + 44px); left: -22px; }
 
-/* Margin ruler: the toolbar's bottom line, full width. A handle marks each edge
-   of the column; ticks at the snap widths, centred on the middle, show only
-   while hovering or dragging. */
+/* Margin ruler: a transparent strip under the toolbar. The scale — a line with
+   ticks at the snap widths, centred so they sit symmetric about the middle —
+   spans the column plus one tick past each edge; the ticks show only while
+   hovering or dragging. A handle marks each edge of the column. */
 .sh-ruler { position: relative; height: 9px; touch-action: none; }
-.sh-ruler::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--sh-border); }
-.sh-ruler-ticks {
-  position: absolute; left: 0; right: 0; top: 1px; height: 5px; opacity: 0; transition: opacity 0.15s;
-  /* One tile per tick, its line in the tile's middle; positioned from the
-     centre so the ticks sit symmetric about the column's middle. */
+.sh-ruler-scale {
+  position: absolute; top: 0; left: 0; right: 0; height: 6px; margin: 0 auto;
+  width: calc(var(--sh-line-width) + 2 * var(--sh-ruler-tick)); max-width: 100%;
+}
+.sh-ruler-scale::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--sh-border); }
+.sh-ruler-scale::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 1px; height: 5px; opacity: 0; transition: opacity 0.15s;
   background:
     linear-gradient(90deg, transparent calc(50% - 0.5px), var(--sh-muted) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px))
       center top / calc(var(--sh-ruler-tick) * 3) 5px repeat-x,
@@ -136,7 +139,7 @@
 .sh-ruler-handle::after { content: ''; position: absolute; inset: -4px -6px; }
 .sh-ruler-handle[data-side='left'] { left: 0; transform: translateX(-50%); }
 .sh-ruler-handle[data-side='right'] { right: 0; transform: translateX(50%); }
-.sh-ruler:hover .sh-ruler-ticks, .sh-ruler.is-dragging .sh-ruler-ticks { opacity: 1; }
+.sh-ruler:hover .sh-ruler-scale::after, .sh-ruler.is-dragging .sh-ruler-scale::after { opacity: 1; }
 .sh-ruler:hover .sh-ruler-handle, .sh-ruler.is-dragging .sh-ruler-handle { opacity: 1; }
 .sh-ruler.is-dragging .sh-ruler-column::before { opacity: 0.6; }
 .sh-ruler-handle:hover, .sh-ruler-handle:focus-visible, .sh-ruler.is-dragging .sh-ruler-handle { background: var(--sh-accent); opacity: 1; }
@@ -288,9 +291,9 @@
 .sh-legacy { background: var(--sh-bg-raised); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 8px 12px; color: var(--sh-muted); margin-bottom: 8px; }
 /* Toolbar and ruler stay in view while the document scrolls, in the window or
    in a host's scroll container. */
-.sh-header { position: sticky; top: 0; z-index: 15; background: var(--sh-bg); margin-bottom: 8px; }
-.sh-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); }
-/* With a ruler, the ruler's line is the toolbar's bottom edge. */
+.sh-header { position: sticky; top: 0; z-index: 15; margin-bottom: 8px; }
+.sh-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); background: var(--sh-bg); }
+/* With a ruler, the ruler's line takes the place of the toolbar's bottom edge. */
 .sh-header.has-ruler .sh-toolbar { border-bottom: 0; }
 .sh-tb-btn { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
 .sh-tb-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }

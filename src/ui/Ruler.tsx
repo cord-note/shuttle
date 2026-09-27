@@ -23,8 +23,10 @@ interface RulerProps {
 }
 
 /**
- * The toolbar's bottom line, doubling as a ruler: a handle at each edge of the
- * text column, and ticks (shown on hover) at the widths it snaps to. The
+ * A ruler under the toolbar: a line across the text column (one tick past each
+ * edge), a handle at each edge, and ticks (shown on hover) at the widths it
+ * snaps to. The strip itself is transparent and spans the editor, so a handle
+ * can be dragged past the line's end. The
  * column stays centred, so dragging either handle changes the width by twice
  * the distance moved. The width is committed on release.
  */
@@ -97,7 +99,7 @@ export function Ruler({ width, range, onPreview, onChange }: RulerProps) {
       ref={track}
       style={{ '--sh-ruler-tick': `${tick}px` } as CSSProperties}
     >
-      <div className="sh-ruler-ticks" aria-hidden="true" />
+      <div className="sh-ruler-scale" aria-hidden="true" />
       <div className="sh-ruler-column">
         {handle('left')}
         {handle('right')}
