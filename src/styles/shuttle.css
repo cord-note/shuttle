@@ -109,8 +109,8 @@
 
 /* Margin ruler: a transparent strip under the toolbar. The scale — a line with
    ticks at the snap widths, centred so they sit symmetric about the middle —
-   spans the column plus one tick past each edge; the ticks show only while
-   hovering or dragging. A handle marks each edge of the column. */
+   spans the column plus one tick past each edge. The ticks and the handle at
+   each edge of the column show only while hovering, dragging or focused. */
 .sh-ruler { position: relative; height: 9px; touch-action: none; }
 .sh-ruler-scale {
   position: absolute; top: 0; left: 0; right: 0; height: 6px; margin: 0 auto;
@@ -132,7 +132,7 @@
 }
 .sh-ruler-handle {
   position: absolute; top: 0; width: 2px; height: 7px; border-radius: 1px;
-  background: var(--sh-muted); opacity: 0.45; cursor: ew-resize;
+  background: var(--sh-muted); opacity: 0; cursor: ew-resize;
   transition: opacity 0.15s, background 0.15s;
 }
 /* A wider, invisible grab area than the 2px mark. */

@@ -205,3 +205,12 @@ describe('shuttle.css chrome', () => {
     expect(css).toMatch(/input\[type='checkbox'\]:checked::after\s*\{/);
   });
 });
+
+describe('shuttle.css ruler visibility', () => {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  it('hides the handles like the ticks until hovered, dragged or focused', () => {
+    expect(css).toMatch(/\.sh-ruler-handle \{[^}]*opacity:\s*0;/);
+    expect(css).toMatch(/\.sh-ruler:hover \.sh-ruler-handle[^{]*\{[^}]*opacity:\s*1/);
+    expect(css).toMatch(/\.sh-ruler-handle:focus-visible[^{]*\{[^}]*opacity:\s*1/);
+  });
+});
