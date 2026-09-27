@@ -130,7 +130,7 @@ const host = createFakeHost();
 | `host` | `ShuttleHost` | Your app's adapter. Pass a **new object** when your note list changes; Shuttle refreshes views derived from it (unlinked mentions) when the identity changes. |
 | `onChange` | `(docKey, doc) => void` | Save callback, debounced. Also called immediately when `docKey` changes and on unmount, so an edit inside the debounce window is never lost. |
 | `onStats` | `({ words, characters }) => void` | Optional. Word and character counts after every load and edit. |
-| `onReady` | `(editor \| null, controls \| null) => void` | Optional. The live Tiptap `Editor`, for your own overlays or commands, and `ShuttleControls` (`openRefPicker()`, `openFind()`, `pickImage()`) to open Shuttle's dialogs from your own menus. Both are `null` on unmount. |
+| `onReady` | `(editor \| null, controls \| null) => void` | Optional. The live Tiptap `Editor`, for your own overlays or commands, and `ShuttleControls` (`openRefPicker()`, `openFind()`, `pickImage()`) to open Shuttle's dialogs from your own menus, plus `pickNote()` / `pickBlock()`, which open the reference picker and resolve with the choice (or `null`). Both are `null` on unmount. |
 | `saveDebounceMs` | `number` | Optional. Debounce for `onChange`. Default `750`. |
 | `toolbar` | `boolean` | Optional. Show the formatting toolbar. Default `true`. |
 | `outline` | `boolean` | Optional. Show the heading outline panel. Default `false`. |
@@ -138,6 +138,9 @@ const host = createFakeHost();
 | `twitchParent` | `string` | Optional. Your page's hostname, which Twitch embeds require. Default `window.location.hostname`. |
 | `colorScheme` | `'light' \| 'dark' \| 'auto'` | Optional. Palette for code highlighting; `auto` follows the system. Pass your app's scheme if it has its own switch. Default `'auto'`. |
 | `spellCheck` | `boolean` | Optional. Turns the browser's spell checking on or off for the document. Omitted, the browser decides (usually on). |
+| `lineWidth` | `number` | Optional. Width of the text column in px, centred; the toolbar follows it. Omitted, the text fills the editor. |
+| `onLineWidthChange` | `(width) => void` | Optional. Shows a margin ruler under the toolbar with a handle at each edge of the column; dragging (or the arrow keys on a handle) calls this with the new width when released. Store it and pass it back as `lineWidth`. |
+| `lineWidthRange` | `{ min, max }` | Optional. Limits for the ruler. Default `320` to the editor's full width. |
 | `twitch` | `boolean` | Optional. `false` stops pasted Twitch links from becoming embeds (use it where Twitch can't play, such as desktop shells). Stored embeds still load. Default `true`. |
 | `className` | `string` | Optional. Extra class on the root element (`.sh-root`). |
 | `children` | `ReactNode` | Optional. Rendered inside the content area, for overlays positioned against the document. |

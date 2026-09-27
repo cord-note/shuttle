@@ -13,6 +13,7 @@ const CSS_PATH = join(import.meta.dir, '..', 'src', 'styles', 'shuttle.css');
  */
 const IGNORED = new Set<string>([
   'sh-mode', // `sh-mode-${mode}` — the two concrete values are sh-mode-note / sh-mode-notepad, both checked explicitly below.
+  'sh-line-width', // `--sh-line-width`, a custom property set inline on the root, not a class.
 ]);
 
 function collectFiles(dir: string, out: string[] = []): string[] {

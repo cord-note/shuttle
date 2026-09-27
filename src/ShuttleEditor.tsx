@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
@@ -21,6 +21,7 @@ import { MathEditor } from './ui/MathEditor';
 import { MathAlignToggle } from './ui/MathAlignToggle';
 import { FindBar } from './ui/FindBar';
 import { Outline } from './ui/Outline';
+import { Ruler, type LineWidthRange } from './ui/Ruler';
 
 export interface PickerOptions {
   /** The picker's label, e.g. "Link to note". */
@@ -82,12 +83,24 @@ export interface ShuttleEditorProps {
   colorScheme?: 'light' | 'dark' | 'auto';
   /** The browser's spell checking on the document. Omitted, the browser decides. */
   spellCheck?: boolean;
+  /** Width of the text column in px, centred. Omitted, the text fills the editor. */
+  lineWidth?: number;
+  /**
+   * Given, a ruler under the toolbar lets the user drag the column's margins;
+   * called with the new width when a drag ends. Store it and pass it back as
+   * `lineWidth`.
+   */
+  onLineWidthChange?: (width: number) => void;
+  /** Limits for the ruler. Default 320px to the editor's full width. */
+  lineWidthRange?: LineWidthRange;
   className?: string;
   /** Host overlays rendered inside the content area. */
   children?: ReactNode;
 }
 
 const DEFAULT_DEBOUNCE_MS = 750;
+const DEFAULT_LINE_WIDTH = 720;
+const DEFAULT_LINE_WIDTH_RANGE: LineWidthRange = { min: 320, max: Infinity };
 
 /**
  * Replaces the editor's document without making the load undoable.
@@ -121,6 +134,8 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
 
   const [legacy, setLegacy] = useState(false);
   const [picker, setPickerState] = useState<PickerState | null>(null);
+  /** The column width while a ruler handle is being dragged. */
+  const [widthPreview, setWidthPreview] = useState<number | null>(null);
   const [math, setMath] = useState<MathEditRequest | null>(null);
   const [find, setFind] = useState(false);
   const [toc, setToc] = useState<TableOfContentData>([]);
@@ -308,11 +323,16 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editable = editor !== null && !legacy;
+  const { lineWidth, onLineWidthChange } = props;
+  const columnWidth = widthPreview ?? lineWidth ?? (onLineWidthChange ? DEFAULT_LINE_WIDTH : undefined);
+  const rootStyle = columnWidth === undefined ? undefined : ({ '--sh-line-width': `${columnWidth}px` } as CSSProperties);
 
   return (
     <div
       className={`sh-root sh-mode-${mode}${className ? ` ${className}` : ''}`}
       data-sh-scheme={colorScheme === 'auto' ? undefined : colorScheme}
+      data-sh-width={columnWidth === undefined ? undefined : ''}
+      style={rootStyle}
     >
       {legacy && (
         <div className="sh-legacy" role="status">
@@ -320,6 +340,14 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
         </div>
       )}
       {editor && editable && toolbar && <Toolbar editor={editor} ctx={ctx} />}
+      {editor && editable && onLineWidthChange && columnWidth !== undefined && (
+        <Ruler
+          width={lineWidth ?? DEFAULT_LINE_WIDTH}
+          range={props.lineWidthRange ?? DEFAULT_LINE_WIDTH_RANGE}
+          onPreview={setWidthPreview}
+          onChange={(w) => latest.current.onLineWidthChange?.(w)}
+        />
+      )}
       <div className="sh-content">
         <EditorContent editor={editor} className="sh-prose" />
         {editor && editable && <SelectionBubble editor={editor} />}

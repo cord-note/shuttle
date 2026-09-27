@@ -7,6 +7,7 @@
 export {
   ShuttleEditor, loadDocument, type ShuttleEditorProps, type ShuttleControls, type PickerOptions, type PickedBlock,
 } from './ShuttleEditor';
+export type { LineWidthRange } from './ui/Ruler';
 export type {
   ShuttleHost, ShuttleMode, NoteRef, BlockSummary, ResolvedBlock, FragmentActionType, LogLevel,
 } from './host';

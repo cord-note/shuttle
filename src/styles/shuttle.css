@@ -96,6 +96,38 @@
 /* ── Content ─────────────────────────────────────────────────────────────── */
 .sh-content { position: relative; flex: 1; }
 .sh-mode-notepad .sh-content { padding-left: 44px; }
+
+/* A host-set text column (lineWidth): toolbar and text share it, centred.
+   In a notepad the block gutter sits in the content's left padding, so the
+   content box grows by the gutter and shifts left by half of it, keeping the
+   text itself centred under the ruler's handles. */
+.sh-root[data-sh-width] .sh-toolbar,
+.sh-root[data-sh-width] .sh-content {
+  width: 100%; max-width: var(--sh-line-width); margin-left: auto; margin-right: auto; box-sizing: border-box;
+}
+.sh-root[data-sh-width].sh-mode-notepad .sh-content { max-width: calc(var(--sh-line-width) + 44px); left: -22px; }
+
+/* Margin ruler: a hairline across the editor, the column's span marked on it,
+   and a handle at each edge. Quiet until hovered. */
+.sh-ruler { position: relative; height: 12px; margin: -6px 0 4px; touch-action: none; }
+.sh-ruler::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--sh-border); }
+.sh-ruler-column { position: relative; height: 100%; max-width: var(--sh-line-width); margin: 0 auto; }
+.sh-ruler-column::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px;
+  background: var(--sh-muted); opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+}
+.sh-ruler-handle {
+  position: absolute; top: 50%; width: 6px; height: 12px; border-radius: 2px;
+  background: var(--sh-muted); opacity: 0.55; cursor: ew-resize;
+  transition: opacity 0.15s, background 0.15s, transform 0.15s;
+}
+.sh-ruler-handle[data-side='left'] { left: 0; transform: translate(-50%, -50%); }
+.sh-ruler-handle[data-side='right'] { right: 0; transform: translate(50%, -50%); }
+.sh-ruler:hover .sh-ruler-handle, .sh-ruler.is-dragging .sh-ruler-handle { opacity: 1; }
+.sh-ruler:hover .sh-ruler-column::before, .sh-ruler.is-dragging .sh-ruler-column::before { opacity: 1; background: var(--sh-accent); }
+.sh-ruler-handle:hover, .sh-ruler-handle:focus-visible, .sh-ruler.is-dragging .sh-ruler-handle { background: var(--sh-accent); }
+.sh-ruler-handle:focus-visible { outline: 2px solid var(--sh-accent); outline-offset: 2px; }
+.sh-ruler.is-dragging, .sh-ruler.is-dragging * { cursor: ew-resize; }
 .sh-prose .ProseMirror { outline: none; line-height: 1.65; padding: 8px 0 40vh; }
 /* Browser default margins (1em on p, lists, headings...) would stack on top of
    the rhythm below and push task-item text below its checkbox. */
