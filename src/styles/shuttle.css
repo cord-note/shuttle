@@ -175,8 +175,30 @@
   display: flex; align-items: center; flex: none; user-select: none;
   height: 1.65em; height: 1lh;
 }
+/* Drawn from the theme rather than the native control, which ignores dark themes. */
 .sh-prose .ProseMirror li[data-checked] > label input[type='checkbox'] {
-  margin: 0; flex: none; width: 1em; height: 1em; accent-color: var(--sh-accent); cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  position: relative; box-sizing: border-box; flex: none;
+  width: 0.9em; height: 0.9em; margin: 0; padding: 0;
+  border: 1.5px solid var(--sh-muted); border-radius: 3px;
+  background: transparent; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.sh-prose .ProseMirror li[data-checked] > label input[type='checkbox']:hover {
+  border-color: var(--sh-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sh-accent) 15%, transparent);
+}
+.sh-prose .ProseMirror li[data-checked] > label input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--sh-accent); outline-offset: 2px;
+}
+.sh-prose .ProseMirror li[data-checked] > label input[type='checkbox']:checked {
+  background: var(--sh-accent); border-color: var(--sh-accent);
+}
+.sh-prose .ProseMirror li[data-checked] > label input[type='checkbox']:checked::after {
+  content: ''; position: absolute; left: 18%; top: 22%;
+  width: 55%; height: 30%;
+  border-left: 2px solid var(--sh-on-accent); border-bottom: 2px solid var(--sh-on-accent);
+  transform: rotate(-45deg);
 }
 .sh-prose .ProseMirror li[data-checked] > div { flex: 1; min-width: 0; }
 .sh-prose .ProseMirror li[data-checked='true'] > div { color: var(--sh-muted); text-decoration: line-through; }
@@ -218,7 +240,11 @@
 
 /* ── Chrome ─────────────────────────────────────────────────────────────── */
 .sh-legacy { background: var(--sh-bg-raised); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 8px 12px; color: var(--sh-muted); margin-bottom: 8px; }
-.sh-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); margin-bottom: 8px; }
+.sh-toolbar {
+  display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); margin-bottom: 8px;
+  /* Stays in view while the document scrolls, in the window or in a host's scroll container. */
+  position: sticky; top: 0; z-index: 15; background: var(--sh-bg);
+}
 .sh-tb-btn { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
 .sh-tb-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
 /* `.is-active` also covers the `aria-pressed="true"` state on the same button — Toolbar sets both together. */
@@ -270,7 +296,8 @@
 .sh-refpicker-back { display: inline-flex; gap: 4px; align-items: center; border: 0; background: none; color: var(--sh-muted); cursor: pointer; }
 .sh-refpicker-list { overflow-y: auto; padding: 4px; }
 .sh-refpicker-meta { margin-left: auto; color: var(--sh-muted); font-size: 0.8em; }
-.sh-dialog { position: fixed; z-index: 9999; left: 50%; top: 20vh; transform: translateX(-50%); width: min(460px, 92vw); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+/* The formula editor: a popover placed under its formula by JS (see ui/anchor.ts). */
+.sh-dialog { position: fixed; z-index: 9999; left: 0; top: 0; width: min(420px, calc(100vw - 16px)); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .sh-math-input { min-height: 70px; font-family: monospace; resize: vertical; border: 1px solid var(--sh-border); border-radius: 5px; padding: 6px; background: var(--sh-bg-raised); color: inherit; }
 .sh-math-preview { min-height: 32px; overflow-x: auto; }
 .sh-dialog-actions { display: flex; justify-content: flex-end; gap: 6px; }

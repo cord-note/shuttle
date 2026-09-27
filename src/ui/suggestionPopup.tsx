@@ -2,6 +2,7 @@ import { ReactRenderer } from '@tiptap/react';
 import type { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import type { ForwardRefExoticComponent, RefAttributes } from 'react';
 import type { KeyHandlerRef, SuggestionListProps } from './SuggestionList';
+import { followViewport, isAnchorVisible, positionNear } from './anchor';
 
 export interface PopupSize {
   maxHeight: number;
@@ -11,8 +12,9 @@ export interface PopupSize {
 type ListComponent<Item> = ForwardRefExoticComponent<SuggestionListProps<Item> & RefAttributes<KeyHandlerRef>>;
 
 /**
- * Suggestion `render` factory: mounts the list in a fixed-position wrapper,
- * flips it above the caret when there is no room below and keeps it on screen.
+ * Suggestion `render` factory: mounts the list in a fixed-position wrapper next
+ * to the caret, flips it above when there is no room below, and follows the
+ * caret while anything scrolls (hiding while the caret is scrolled out of view).
  */
 export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize) {
   return () => {
@@ -21,23 +23,26 @@ export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize
     // Suggestion reports `items: []` with `loading: true` before every fetch;
     // keep showing the last results meanwhile instead of flashing "empty".
     let shown: Item[] = [];
+    let anchor: (() => DOMRect | null) | null | undefined = null;
+    let editorDom: Element | null = null;
+    let unfollow: (() => void) | null = null;
 
     const listProps = (props: SuggestionProps<Item, Item>): SuggestionListProps<Item> => {
       if (!props.loading) shown = props.items;
       return { items: shown, command: props.command, loading: props.loading };
     };
 
-    const place = (clientRect: (() => DOMRect | null) | null | undefined): void => {
-      const rect = clientRect?.();
+    const place = (): void => {
+      const rect = anchor?.();
       if (!wrapper || !rect) return;
-      const below = rect.bottom + 4;
-      const top = below + size.maxHeight > window.innerHeight ? rect.top - size.maxHeight - 4 : below;
-      const left = Math.max(8, Math.min(rect.left, window.innerWidth - size.maxWidth - 8));
-      wrapper.style.top = `${top}px`;
-      wrapper.style.left = `${left}px`;
+      const visible = !editorDom || isAnchorVisible(rect, editorDom);
+      wrapper.style.visibility = visible ? '' : 'hidden';
+      if (visible) positionNear(wrapper, rect, { width: size.maxWidth, height: size.maxHeight });
     };
 
     const close = (): void => {
+      unfollow?.();
+      unfollow = null;
       wrapper?.remove();
       renderer?.destroy();
       wrapper = null;
@@ -55,11 +60,15 @@ export function suggestionPopup<Item>(List: ListComponent<Item>, size: PopupSize
         wrapper.className = 'sh-popup-anchor';
         wrapper.appendChild(renderer.element);
         document.body.appendChild(wrapper);
-        place(props.clientRect);
+        anchor = props.clientRect;
+        editorDom = props.editor.view.dom;
+        unfollow = followViewport(place);
+        place();
       },
       onUpdate(props: SuggestionProps<Item, Item>) {
         renderer?.updateProps(listProps(props));
-        place(props.clientRect);
+        anchor = props.clientRect;
+        place();
       },
       onKeyDown(props: SuggestionKeyDownProps): boolean {
         if (props.event.key === 'Escape') { close(); return true; }

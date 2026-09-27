@@ -60,6 +60,8 @@ export interface ShuttleEditorProps {
    * `prefers-color-scheme`; pass `light` or `dark` to match your app's theme.
    */
   colorScheme?: 'light' | 'dark' | 'auto';
+  /** The browser's spell checking on the document. Omitted, the browser decides. */
+  spellCheck?: boolean;
   className?: string;
   /** Host overlays rendered inside the content area. */
   children?: ReactNode;
@@ -228,6 +230,16 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
       setFind(false);
     }
   }, [docKey, editor]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tiptap hands editorProps to ProseMirror's setProps, where `attributes`
+  // replaces the whole set, so keep the role Tiptap gives the surface.
+  const { spellCheck } = props;
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    const attributes: Record<string, string> = { role: 'textbox' };
+    if (spellCheck !== undefined) attributes['spellcheck'] = String(spellCheck);
+    editor.setOptions({ editorProps: { ...editor.options.editorProps, attributes } });
+  }, [editor, spellCheck]);
 
   // A new host may carry a new note list; rebuild the views derived from it.
   const previousHost = useRef(host);

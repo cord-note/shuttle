@@ -293,4 +293,13 @@ describe('ShuttleEditor', () => {
     mount({});
     expect(container!.querySelector('.sh-root')?.hasAttribute('data-sh-scheme')).toBe(false);
   });
+
+  it('applies the host spell-check setting to the editable surface', () => {
+    const h = mount({ spellCheck: false });
+    const surface = (): Element | null => container!.querySelector('.ProseMirror');
+    expect(surface()?.getAttribute('spellcheck')).toBe('false');
+    h.render({ spellCheck: true });
+    expect(surface()?.getAttribute('spellcheck')).toBe('true');
+  });
 });
+

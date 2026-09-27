@@ -167,3 +167,26 @@ describe('shuttle.css code highlighting', () => {
     expect(rules().some((r) => r.selector.includes('.sh-prose code') && r.body.includes('font-family: var(--sh-mono)'))).toBe(true);
   });
 });
+
+describe('shuttle.css chrome', () => {
+  const css = readFileSync(CSS_PATH, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rule = (selector: string): string => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|[},])\\s*${esc}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+  };
+
+  it('keeps the toolbar in view while the document scrolls', () => {
+    const toolbar = rule('.sh-toolbar');
+    expect(toolbar).toMatch(/position:\s*sticky/);
+    expect(toolbar).toMatch(/top:\s*0/);
+    expect(toolbar).toMatch(/background:/);
+  });
+
+  it('draws its own task checkboxes from the theme instead of the native control', () => {
+    const box = rule(".sh-prose .ProseMirror li[data-checked] > label input[type='checkbox']");
+    expect(box).toMatch(/appearance:\s*none/);
+    expect(box).toMatch(/border:[^;]*var\(--sh-/);
+    expect(css).toMatch(/input\[type='checkbox'\]:checked\s*\{[^}]*background:\s*var\(--sh-accent\)/);
+    expect(css).toMatch(/input\[type='checkbox'\]:checked::after\s*\{/);
+  });
+});

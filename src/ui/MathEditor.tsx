@@ -1,7 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import katex from 'katex';
 import type { MathEditRequest } from '../context';
+import { followViewport, positionNear } from './anchor';
+
+/** Screen rect of the formula being edited, falling back to its position's caret rect. */
+function formulaRect(editor: Editor, pos: number): DOMRect | null {
+  const dom = editor.view.nodeDOM(pos);
+  if (dom instanceof HTMLElement) return dom.getBoundingClientRect();
+  try {
+    const c = editor.view.coordsAtPos(pos);
+    return new DOMRect(c.left, c.top, 0, c.bottom - c.top);
+  } catch {
+    return null;
+  }
+}
 
 const nodeName = (kind: MathEditRequest['kind']): string => (kind === 'inline' ? 'inlineMath' : 'blockMath');
 
@@ -48,8 +61,30 @@ export function MathEditor({ editor, request, onClose }: { editor: Editor; reque
     onClose();
   };
 
+  // Anchored under the formula it edits, following it while the page scrolls.
+  const panel = useRef<HTMLDivElement>(null);
+  const latest = useRef({ cancel });
+  latest.current = { cancel };
+  useLayoutEffect(() => {
+    const place = (): void => {
+      const rect = formulaRect(editor, request.pos);
+      if (panel.current && rect) positionNear(panel.current, rect);
+    };
+    place();
+    const unfollow = followViewport(place);
+    // A click elsewhere dismisses it, like every other popup.
+    const onPointerDown = (e: PointerEvent): void => {
+      if (panel.current && !panel.current.contains(e.target as Node)) latest.current.cancel();
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      unfollow();
+      document.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [editor, request.pos]);
+
   return (
-    <div className="sh-dialog" role="dialog" aria-modal="true" aria-label="Edit formula">
+    <div ref={panel} className="sh-dialog" role="dialog" aria-label="Edit formula">
       <textarea
         autoFocus
         className="sh-math-input"
