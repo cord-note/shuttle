@@ -6,6 +6,12 @@ import type { ViewOptions } from '../links/wikiLink';
 import { topLevelAt } from '../../doc/topLevel';
 import BlockRefView from './BlockRefView';
 
+/** What a transclusion stores: the ids of the block it shows, never its content. */
+export interface BlockRefAttrs {
+  refBlockId: string;
+  refNoteId: string;
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     blockRef: {

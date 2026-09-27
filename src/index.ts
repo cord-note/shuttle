@@ -1,3 +1,9 @@
+// Hosts call commands on the Editor from `onReady`, and Tiptap types commands
+// by augmenting `@tiptap/core` from each extension's declarations. A type is
+// exported from every file declaring Shuttle's own commands so the declaration
+// bundle keeps their augmentations; the official extensions' are referenced by
+// the banner in tsup.config.ts.
+
 export { ShuttleEditor, loadDocument, type ShuttleEditorProps, type ShuttleControls } from './ShuttleEditor';
 export type {
   ShuttleHost, ShuttleMode, NoteRef, BlockSummary, ResolvedBlock, FragmentActionType, LogLevel,
@@ -14,5 +20,8 @@ export { topLevelAt, blockIdAt } from './doc/topLevel';
 export { toStoredJson } from './doc/persist';
 export { UNLINKED_REFRESH_META } from './custom/unlinkedMentions';
 export type { FragmentLinkAttrs } from './custom/links/fragmentLink';
+export type { BlockRefAttrs } from './custom/blockRef/blockRef';
+export type { BlockMathAlign } from './custom/math/blockMath';
+export type { TurnIntoType } from './custom/notepad/commands';
 export { createFakeHost, type FakeHost, type FakeHostOptions } from './testing/fakeHost';
 export type { Editor, JSONContent } from '@tiptap/core';

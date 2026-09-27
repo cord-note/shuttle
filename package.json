@@ -59,7 +59,7 @@
     }
   },
   "scripts": {
-    "build": "tsup && node scripts/copy-styles.mjs",
+    "build": "tsup && node scripts/copy-styles.mjs && node scripts/command-types.mjs",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "playground": "vite --config playground/vite.config.ts",
