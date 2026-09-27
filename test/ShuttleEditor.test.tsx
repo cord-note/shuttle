@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'bun:test';
 import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { Editor, JSONContent } from '@tiptap/core';
-import { ShuttleEditor, type ShuttleEditorProps } from '../src/ShuttleEditor';
+import { ShuttleEditor, type ShuttleControls, type ShuttleEditorProps } from '../src/ShuttleEditor';
 import { createFakeHost } from '../src/testing/fakeHost';
 import { sleep } from './helpers';
 
@@ -261,5 +261,21 @@ describe('ShuttleEditor', () => {
     act(() => { h.editor().commands.insertContent('x'); });
     await act(async () => { await sleep(30); });
     expect(h.saves.map((s) => s.key)).toEqual(['b']);
+  });
+
+  it('hands hosts controls for its dialogs through onReady', async () => {
+    const calls: [Editor | null, ShuttleControls | null][] = [];
+    mount({ onReady: (e, c) => { calls.push([e, c]); } });
+    const controls = calls.at(-1)?.[1];
+    expect(calls.at(-1)?.[0]).toBeTruthy();
+    expect(typeof controls?.pickImage).toBe('function');
+    act(() => { controls!.openFind(); });
+    expect(container!.querySelector('input[placeholder="Find"]')).not.toBeNull();
+    act(() => { controls!.openRefPicker(); });
+    await act(async () => { await sleep(5); });
+    expect(container!.querySelector('.sh-refpicker')).not.toBeNull();
+    act(() => root!.unmount());
+    root = null;
+    expect(calls.at(-1)).toEqual([null, null]);
   });
 });

@@ -22,6 +22,13 @@ import { MathAlignToggle } from './ui/MathAlignToggle';
 import { FindBar } from './ui/FindBar';
 import { Outline } from './ui/Outline';
 
+/** Opens Shuttle's own dialogs from outside the editor (command bars, menus). */
+export interface ShuttleControls {
+  openRefPicker(): void;
+  openFind(): void;
+  pickImage(): void;
+}
+
 export interface ShuttleEditorProps {
   /** Identity of the document. Changing it loads `doc` and flushes pending edits. */
   docKey: string;
@@ -36,13 +43,18 @@ export interface ShuttleEditorProps {
   /** Debounced save; also called immediately on document switch and unmount. */
   onChange: (docKey: string, doc: JSONContent) => void;
   onStats?: (stats: { words: number; characters: number }) => void;
-  /** The live editor, for host overlays (context menus, fragment overlays). */
-  onReady?: (editor: Editor | null) => void;
+  /**
+   * The live editor, for host overlays (context menus, fragment overlays), and
+   * controls for Shuttle's dialogs. Both are null on unmount.
+   */
+  onReady?: (editor: Editor | null, controls: ShuttleControls | null) => void;
   saveDebounceMs?: number;
   toolbar?: boolean;
   outline?: boolean;
   placeholder?: string;
   twitchParent?: string;
+  /** False stops pasted Twitch links from becoming embeds. Defaults to true. */
+  twitch?: boolean;
   className?: string;
   /** Host overlays rendered inside the content area. */
   children?: ReactNode;
@@ -75,7 +87,7 @@ const toSaved = (editor: Editor): JSONContent => toStoredJson(stripPendingUpload
 
 export function ShuttleEditor(props: ShuttleEditorProps) {
   const {
-    docKey, doc, mode, host, toolbar = true, outline = false, placeholder, className, children,
+    docKey, doc, mode, host, toolbar = true, outline = false, placeholder, twitch = true, className, children,
   } = props;
   const twitchParent = props.twitchParent
     ?? (typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost');
@@ -142,9 +154,10 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   const extensions = useMemo(() => buildExtensions(mode, ctx, {
     reactViews: true,
     twitchParent,
+    twitch,
     ...(placeholder ? { placeholder } : {}),
     onOutline: (items) => setToc(items),
-  }), [mode, twitchParent, placeholder]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [mode, twitchParent, twitch, placeholder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editor = useEditor({
     immediatelyRender: true,
@@ -174,7 +187,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
 
       reportStats(ed);
     },
-  }, [mode, twitchParent, placeholder]);
+  }, [mode, twitchParent, twitch, placeholder]);
 
   // Load the document for this key, after writing the previous key's edit.
   // The same key again means the editor was rebuilt (mode change, StrictMode),
@@ -221,9 +234,9 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   }, [host, editor]);
 
   useEffect(() => {
-    latest.current.onReady?.(editor);
-    return () => latest.current.onReady?.(null);
-  }, [editor]);
+    latest.current.onReady?.(editor, editor ? events : null);
+    return () => latest.current.onReady?.(null, null);
+  }, [editor, events]);
 
   // Write, never drop, an edit still inside the debounce window.
   useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps

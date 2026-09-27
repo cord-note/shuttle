@@ -1,4 +1,4 @@
-export { ShuttleEditor, loadDocument, type ShuttleEditorProps } from './ShuttleEditor';
+export { ShuttleEditor, loadDocument, type ShuttleEditorProps, type ShuttleControls } from './ShuttleEditor';
 export type {
   ShuttleHost, ShuttleMode, NoteRef, BlockSummary, ResolvedBlock, FragmentActionType, LogLevel,
 } from './host';

@@ -70,6 +70,30 @@ describe('schema', () => {
   });
 });
 
+describe('twitch switch', () => {
+  const url = 'https://www.twitch.tv/videos/1234567890';
+  const types = (e: { state: { doc: { descendants(f: (n: { type: { name: string } }) => void): void } } }): Set<string> => {
+    const found = new Set<string>();
+    e.state.doc.descendants((n) => { found.add(n.type.name); });
+    return found;
+  };
+
+  it('turns a pasted Twitch link into an embed by default', () => {
+    const { editor } = makeEditor();
+    editor.view.pasteText(url);
+    expect(types(editor).has('twitch')).toBe(true);
+    editor.destroy();
+  });
+
+  it('keeps the node but not the paste handler when switched off', () => {
+    const { editor } = makeEditor({ build: { twitch: false } });
+    expect(editor.schema.nodes['twitch']).toBeDefined();
+    editor.view.pasteText(url);
+    expect(types(editor).has('twitch')).toBe(false);
+    editor.destroy();
+  });
+});
+
 describe('blockId guard', () => {
   const p = (id: string | null, t: string): JSONContent => ({ type: 'paragraph', attrs: { blockId: id }, content: [text(t)] });
   const topIds = (doc: { forEach(f: (n: { attrs: Record<string, unknown> }) => void): void }): unknown[] => {

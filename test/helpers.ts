@@ -1,5 +1,5 @@
 import { Editor, type JSONContent } from '@tiptap/core';
-import { buildExtensions } from '../src/extensions';
+import { buildExtensions, type BuildOptions } from '../src/extensions';
 import { createFakeHost, type FakeHost } from '../src/testing/fakeHost';
 import { noopEvents, type ShuttleContextRef, type ShuttleUiEvents } from '../src/context';
 import type { ShuttleMode } from '../src/host';
@@ -15,12 +15,13 @@ export function makeEditor(opts: {
   content?: JSONContent | string;
   host?: FakeHost;
   events?: Partial<ShuttleUiEvents>;
+  build?: Partial<BuildOptions>;
 } = {}): Made {
   const host = opts.host ?? createFakeHost();
   const ctx: ShuttleContextRef = { current: { host, events: { ...noopEvents, ...opts.events }, docKey: 'n-self' } };
   const editor = new Editor({
     element: document.createElement('div'),
-    extensions: buildExtensions(opts.mode ?? 'note', ctx, { reactViews: false, twitchParent: 'localhost' }),
+    extensions: buildExtensions(opts.mode ?? 'note', ctx, { reactViews: false, twitchParent: 'localhost', ...opts.build }),
     content: opts.content ?? '<p></p>',
   });
   return { editor, host, ctx };

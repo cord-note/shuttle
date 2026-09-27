@@ -46,6 +46,11 @@ export interface BuildOptions {
   reactViews: boolean;
   /** Twitch embeds require the embedding page's host name. */
   twitchParent: string;
+  /**
+   * False keeps the Twitch node (stored embeds still load) but stops pasted
+   * Twitch links from becoming embeds. Defaults to true.
+   */
+  twitch?: boolean;
   placeholder?: string;
   /** Receives heading outline updates for the Outline panel. */
   onOutline?: (items: TableOfContentData) => void;
@@ -84,7 +89,7 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
       onDrop: (editor, files, pos) => { void insertImageFiles(editor, ctx, files, pos); },
     }),
     Youtube.configure({ nocookie: true, controls: true }),
-    Twitch.configure({ parent: options.twitchParent }),
+    Twitch.configure({ parent: options.twitchParent, addPasteHandler: options.twitch ?? true }),
     TableKit.configure({ table: { resizable: false } }),
     ShuttleDetails,
     DetailsSummary,
