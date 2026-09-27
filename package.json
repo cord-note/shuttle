@@ -1,6 +1,6 @@
 {
   "name": "shuttle-editor",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "A React rich-text editor for note-taking apps, built on Tiptap 3: wiki links, addressable blocks, transclusion, math, tables and markdown paste.",
   "keywords": [
     "tiptap",

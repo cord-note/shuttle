@@ -1,13 +1,19 @@
 # Changelog
 
-## 0.2.2
+## 0.3.0
 
+- A margin ruler: new `lineWidth`, `onLineWidthChange` and `lineWidthRange` props.
+  The text sits in a centred column; the toolbar's bottom line becomes a ruler with a
+  handle at each edge (drag or arrow keys) and ticks at the snap widths.
+- `ShuttleControls.pickNote()` and `pickBlock()` open the reference picker for a host's
+  own links and resolve with the choice, or `null` when dismissed.
 - The slash menu and `[[` autocomplete follow the caret when the page or a host's
   scroll container scrolls, hide while the caret is out of view, and flip above it
   based on their real height.
 - The formula editor opens as a popover under the formula instead of a box in the
   middle of the window, follows it while scrolling, and closes on an outside click.
-- The formatting toolbar stays in view (`position: sticky`) while the document scrolls.
+- The formatting toolbar stays in view (`position: sticky`) while the document scrolls,
+  and centres its buttons when a text column is set.
 - Task checkboxes are drawn from the theme (`--accent`, `--text-muted`), so they
   match light and dark themes instead of showing the native control.
 - New `spellCheck` prop to turn the browser's spell checking on or off.
