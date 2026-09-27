@@ -97,35 +97,49 @@
 .sh-content { position: relative; flex: 1; }
 .sh-mode-notepad .sh-content { padding-left: 44px; }
 
-/* A host-set text column (lineWidth): toolbar and text share it, centred.
-   In a notepad the block gutter sits in the content's left padding, so the
-   content box grows by the gutter and shifts left by half of it, keeping the
-   text itself centred under the ruler's handles. */
-.sh-root[data-sh-width] .sh-toolbar,
+/* A host-set text column (lineWidth), centred. The toolbar stays centred over
+   it rather than stretching with it. In a notepad the block gutter sits in the
+   content's left padding, so the content box grows by the gutter and shifts
+   left by half of it, keeping the text itself centred between the handles. */
+.sh-root[data-sh-width] .sh-toolbar { justify-content: center; }
 .sh-root[data-sh-width] .sh-content {
   width: 100%; max-width: var(--sh-line-width); margin-left: auto; margin-right: auto; box-sizing: border-box;
 }
 .sh-root[data-sh-width].sh-mode-notepad .sh-content { max-width: calc(var(--sh-line-width) + 44px); left: -22px; }
 
-/* Margin ruler: a hairline across the editor, the column's span marked on it,
-   and a handle at each edge. Quiet until hovered. */
-.sh-ruler { position: relative; height: 12px; margin: -6px 0 4px; touch-action: none; }
-.sh-ruler::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--sh-border); }
-.sh-ruler-column { position: relative; height: 100%; max-width: var(--sh-line-width); margin: 0 auto; }
+/* Margin ruler: the toolbar's bottom line, full width. A handle marks each edge
+   of the column; ticks at the snap widths, centred on the middle, show only
+   while hovering or dragging. */
+.sh-ruler { position: relative; height: 9px; touch-action: none; }
+.sh-ruler::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--sh-border); }
+.sh-ruler-ticks {
+  position: absolute; left: 0; right: 0; top: 1px; height: 5px; opacity: 0; transition: opacity 0.15s;
+  /* One tile per tick, its line in the tile's middle; positioned from the
+     centre so the ticks sit symmetric about the column's middle. */
+  background:
+    linear-gradient(90deg, transparent calc(50% - 0.5px), var(--sh-muted) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px))
+      center top / calc(var(--sh-ruler-tick) * 3) 5px repeat-x,
+    linear-gradient(90deg, transparent calc(50% - 0.5px), var(--sh-border) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px))
+      center top / var(--sh-ruler-tick) 3px repeat-x;
+}
+.sh-ruler-column { position: absolute; top: 0; left: 0; right: 0; height: 100%; max-width: var(--sh-line-width); margin: 0 auto; }
 .sh-ruler-column::before {
-  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px;
-  background: var(--sh-muted); opacity: 0.5; transition: opacity 0.15s, background 0.15s;
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: var(--sh-accent); opacity: 0; transition: opacity 0.15s;
 }
 .sh-ruler-handle {
-  position: absolute; top: 50%; width: 6px; height: 12px; border-radius: 2px;
-  background: var(--sh-muted); opacity: 0.55; cursor: ew-resize;
-  transition: opacity 0.15s, background 0.15s, transform 0.15s;
+  position: absolute; top: 0; width: 2px; height: 7px; border-radius: 1px;
+  background: var(--sh-muted); opacity: 0.45; cursor: ew-resize;
+  transition: opacity 0.15s, background 0.15s;
 }
-.sh-ruler-handle[data-side='left'] { left: 0; transform: translate(-50%, -50%); }
-.sh-ruler-handle[data-side='right'] { right: 0; transform: translate(50%, -50%); }
+/* A wider, invisible grab area than the 2px mark. */
+.sh-ruler-handle::after { content: ''; position: absolute; inset: -4px -6px; }
+.sh-ruler-handle[data-side='left'] { left: 0; transform: translateX(-50%); }
+.sh-ruler-handle[data-side='right'] { right: 0; transform: translateX(50%); }
+.sh-ruler:hover .sh-ruler-ticks, .sh-ruler.is-dragging .sh-ruler-ticks { opacity: 1; }
 .sh-ruler:hover .sh-ruler-handle, .sh-ruler.is-dragging .sh-ruler-handle { opacity: 1; }
-.sh-ruler:hover .sh-ruler-column::before, .sh-ruler.is-dragging .sh-ruler-column::before { opacity: 1; background: var(--sh-accent); }
-.sh-ruler-handle:hover, .sh-ruler-handle:focus-visible, .sh-ruler.is-dragging .sh-ruler-handle { background: var(--sh-accent); }
+.sh-ruler.is-dragging .sh-ruler-column::before { opacity: 0.6; }
+.sh-ruler-handle:hover, .sh-ruler-handle:focus-visible, .sh-ruler.is-dragging .sh-ruler-handle { background: var(--sh-accent); opacity: 1; }
 .sh-ruler-handle:focus-visible { outline: 2px solid var(--sh-accent); outline-offset: 2px; }
 .sh-ruler.is-dragging, .sh-ruler.is-dragging * { cursor: ew-resize; }
 .sh-prose .ProseMirror { outline: none; line-height: 1.65; padding: 8px 0 40vh; }
@@ -272,11 +286,12 @@
 
 /* ── Chrome ─────────────────────────────────────────────────────────────── */
 .sh-legacy { background: var(--sh-bg-raised); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 8px 12px; color: var(--sh-muted); margin-bottom: 8px; }
-.sh-toolbar {
-  display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); margin-bottom: 8px;
-  /* Stays in view while the document scrolls, in the window or in a host's scroll container. */
-  position: sticky; top: 0; z-index: 15; background: var(--sh-bg);
-}
+/* Toolbar and ruler stay in view while the document scrolls, in the window or
+   in a host's scroll container. */
+.sh-header { position: sticky; top: 0; z-index: 15; background: var(--sh-bg); margin-bottom: 8px; }
+.sh-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 0; border-bottom: 1px solid var(--sh-border); }
+/* With a ruler, the ruler's line is the toolbar's bottom edge. */
+.sh-header.has-ruler .sh-toolbar { border-bottom: 0; }
 .sh-tb-btn { min-width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--sh-muted); border-radius: 4px; cursor: pointer; }
 .sh-tb-btn:hover { background: var(--sh-bg-raised); color: var(--sh-text); }
 /* `.is-active` also covers the `aria-pressed="true"` state on the same button — Toolbar sets both together. */

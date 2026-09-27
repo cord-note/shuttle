@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 export interface LineWidthRange {
   min: number;
   max: number;
+  /** Widths snap to multiples of this. Default 20. */
+  step?: number;
 }
 
-const STEP = 10;
-const KEY_STEP = 20;
-const KEY_STEP_LARGE = 100;
+const DEFAULT_STEP = 20;
+/** Shift+arrow moves this many steps. */
+const LARGE_STEPS = 5;
+/** Ticks closer than this read as a smear. */
+const MIN_TICK_GAP = 20;
 
 interface RulerProps {
   /** The text column's width in px, as the host stores it. */
@@ -19,9 +23,10 @@ interface RulerProps {
 }
 
 /**
- * A strip under the toolbar with a handle at each edge of the text column.
- * The column stays centred, so dragging either handle changes the width by
- * twice the distance moved. The width is committed on release.
+ * The toolbar's bottom line, doubling as a ruler: a handle at each edge of the
+ * text column, and ticks (shown on hover) at the widths it snaps to. The
+ * column stays centred, so dragging either handle changes the width by twice
+ * the distance moved. The width is committed on release.
  */
 export function Ruler({ width, range, onPreview, onChange }: RulerProps) {
   const track = useRef<HTMLDivElement>(null);
@@ -29,10 +34,15 @@ export function Ruler({ width, range, onPreview, onChange }: RulerProps) {
   const latest = useRef({ onPreview, onChange, range });
   latest.current = { onPreview, onChange, range };
 
+  const step = range.step ?? DEFAULT_STEP;
+  // Each handle moves half the width change, so snap points sit step/2 apart.
+  const half = step / 2;
+  const tick = half * Math.max(1, Math.ceil(MIN_TICK_GAP / half));
+
   const clamp = (w: number): number => {
     const available = track.current?.getBoundingClientRect().width ?? Infinity;
     const max = Math.min(latest.current.range.max, available);
-    return Math.max(latest.current.range.min, Math.min(max, Math.round(w / STEP) * STEP));
+    return Math.max(latest.current.range.min, Math.min(max, Math.round(w / step) * step));
   };
 
   const widthAt = (clientX: number): number => {
@@ -75,14 +85,19 @@ export function Ruler({ width, range, onPreview, onChange }: RulerProps) {
         const inward = side === 'left' ? 'ArrowRight' : 'ArrowLeft';
         if (e.key !== outward && e.key !== inward) return;
         e.preventDefault();
-        const step = e.shiftKey ? KEY_STEP_LARGE : KEY_STEP;
-        onChange(clamp(width + (e.key === outward ? step : -step)));
+        const delta = e.shiftKey ? step * LARGE_STEPS : step;
+        onChange(clamp(width + (e.key === outward ? delta : -delta)));
       }}
     />
   );
 
   return (
-    <div className={`sh-ruler${dragging ? ' is-dragging' : ''}`} ref={track}>
+    <div
+      className={`sh-ruler${dragging ? ' is-dragging' : ''}`}
+      ref={track}
+      style={{ '--sh-ruler-tick': `${tick}px` } as CSSProperties}
+    >
+      <div className="sh-ruler-ticks" aria-hidden="true" />
       <div className="sh-ruler-column">
         {handle('left')}
         {handle('right')}

@@ -139,8 +139,8 @@ const host = createFakeHost();
 | `colorScheme` | `'light' \| 'dark' \| 'auto'` | Optional. Palette for code highlighting; `auto` follows the system. Pass your app's scheme if it has its own switch. Default `'auto'`. |
 | `spellCheck` | `boolean` | Optional. Turns the browser's spell checking on or off for the document. Omitted, the browser decides (usually on). |
 | `lineWidth` | `number` | Optional. Width of the text column in px, centred; the toolbar follows it. Omitted, the text fills the editor. |
-| `onLineWidthChange` | `(width) => void` | Optional. Shows a margin ruler under the toolbar with a handle at each edge of the column; dragging (or the arrow keys on a handle) calls this with the new width when released. Store it and pass it back as `lineWidth`. |
-| `lineWidthRange` | `{ min, max }` | Optional. Limits for the ruler. Default `320` to the editor's full width. |
+| `onLineWidthChange` | `(width) => void` | Optional. Turns the toolbar's bottom line into a margin ruler, with a handle at each edge of the column and ticks on hover; dragging (or the arrow keys on a handle) calls this with the new width when released. Store it and pass it back as `lineWidth`. |
+| `lineWidthRange` | `{ min, max, step? }` | Optional. Limits for the ruler, and the step widths snap to (ticks mark the snap points). Default `320` to the editor's full width, step `20`. |
 | `twitch` | `boolean` | Optional. `false` stops pasted Twitch links from becoming embeds (use it where Twitch can't play, such as desktop shells). Stored embeds still load. Default `true`. |
 | `className` | `string` | Optional. Extra class on the root element (`.sh-root`). |
 | `children` | `ReactNode` | Optional. Rendered inside the content area, for overlays positioned against the document. |

@@ -325,6 +325,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   const editable = editor !== null && !legacy;
   const { lineWidth, onLineWidthChange } = props;
   const columnWidth = widthPreview ?? lineWidth ?? (onLineWidthChange ? DEFAULT_LINE_WIDTH : undefined);
+  const showRuler = onLineWidthChange !== undefined;
   const rootStyle = columnWidth === undefined ? undefined : ({ '--sh-line-width': `${columnWidth}px` } as CSSProperties);
 
   return (
@@ -339,14 +340,18 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
           This note uses an older format and is read-only.
         </div>
       )}
-      {editor && editable && toolbar && <Toolbar editor={editor} ctx={ctx} />}
-      {editor && editable && onLineWidthChange && columnWidth !== undefined && (
-        <Ruler
-          width={lineWidth ?? DEFAULT_LINE_WIDTH}
-          range={props.lineWidthRange ?? DEFAULT_LINE_WIDTH_RANGE}
-          onPreview={setWidthPreview}
-          onChange={(w) => latest.current.onLineWidthChange?.(w)}
-        />
+      {editor && editable && (toolbar || showRuler) && (
+        <div className={`sh-header${showRuler ? ' has-ruler' : ''}`}>
+          {toolbar && <Toolbar editor={editor} ctx={ctx} />}
+          {showRuler && (
+            <Ruler
+              width={lineWidth ?? DEFAULT_LINE_WIDTH}
+              range={props.lineWidthRange ?? DEFAULT_LINE_WIDTH_RANGE}
+              onPreview={setWidthPreview}
+              onChange={(w) => latest.current.onLineWidthChange?.(w)}
+            />
+          )}
+        </div>
       )}
       <div className="sh-content">
         <EditorContent editor={editor} className="sh-prose" />

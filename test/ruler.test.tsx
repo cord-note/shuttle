@@ -73,4 +73,32 @@ describe('margin ruler', () => {
     act(() => { right.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, shiftKey: true })); });
     expect(changes).toEqual([620, 500]);
   });
+
+  it('sits under the toolbar, as its bottom line', () => {
+    const { container } = mount({ lineWidth: 600, onLineWidthChange: () => {} });
+    const header = container.querySelector('.sh-header') as HTMLElement;
+    expect(header.children[0]?.classList.contains('sh-toolbar')).toBe(true);
+    expect(header.children[1]?.classList.contains('sh-ruler')).toBe(true);
+    expect(header.classList.contains('has-ruler')).toBe(true);
+  });
+
+  it('snaps to the range step and spaces its ticks from it', () => {
+    const changes: number[] = [];
+    const { container } = mount({ lineWidth: 600, lineWidthRange: { min: 480, max: 1200, step: 40 }, onLineWidthChange: (w) => changes.push(w) });
+    stubRulerRect(container);
+    // A tick per half step, since each handle moves half the width change.
+    expect((container.querySelector('.sh-ruler') as HTMLElement).style.getPropertyValue('--sh-ruler-tick')).toBe('20px');
+    const right = container.querySelector('.sh-ruler-handle[data-side="right"]') as HTMLElement;
+    act(() => { right.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 800 })); });
+    act(() => { window.dispatchEvent(new MouseEvent('pointerup', { clientX: 865 })); });
+    act(() => { right.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); });
+    // 730 snaps to 720; a key press moves one step.
+    expect(changes).toEqual([720, 640]);
+  });
+
+  it('never packs ticks closer than 20px', () => {
+    const { container } = mount({ lineWidth: 600, onLineWidthChange: () => {} });
+    expect((container.querySelector('.sh-ruler') as HTMLElement).style.getPropertyValue('--sh-ruler-tick')).toBe('20px');
+  });
 });
+

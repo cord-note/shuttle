@@ -14,6 +14,7 @@ const CSS_PATH = join(import.meta.dir, '..', 'src', 'styles', 'shuttle.css');
 const IGNORED = new Set<string>([
   'sh-mode', // `sh-mode-${mode}` — the two concrete values are sh-mode-note / sh-mode-notepad, both checked explicitly below.
   'sh-line-width', // `--sh-line-width`, a custom property set inline on the root, not a class.
+  'sh-ruler-tick', // `--sh-ruler-tick`, a custom property set inline on the ruler, not a class.
 ]);
 
 function collectFiles(dir: string, out: string[] = []): string[] {
@@ -176,11 +177,17 @@ describe('shuttle.css chrome', () => {
     return new RegExp(`(?:^|[},])\\s*${esc}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
   };
 
-  it('keeps the toolbar in view while the document scrolls', () => {
-    const toolbar = rule('.sh-toolbar');
-    expect(toolbar).toMatch(/position:\s*sticky/);
-    expect(toolbar).toMatch(/top:\s*0/);
-    expect(toolbar).toMatch(/background:/);
+  it('keeps the toolbar (and the ruler under it) in view while the document scrolls', () => {
+    const header = rule('.sh-header');
+    expect(header).toMatch(/position:\s*sticky/);
+    expect(header).toMatch(/top:\s*0/);
+    expect(header).toMatch(/background:/);
+  });
+
+  it('centres the toolbar under a host-set column instead of stretching it to the column', () => {
+    expect(rule('.sh-root[data-sh-width] .sh-toolbar')).toMatch(/justify-content:\s*center/);
+    expect(rule('.sh-root[data-sh-width] .sh-content')).toMatch(/max-width:\s*var\(--sh-line-width\)/);
+    expect(css).not.toMatch(/\.sh-root\[data-sh-width\] \.sh-toolbar,/);
   });
 
   it('draws its own task checkboxes from the theme instead of the native control', () => {
