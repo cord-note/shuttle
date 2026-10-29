@@ -22,7 +22,7 @@ export function makeEditor(opts: {
   const editor = new Editor({
     element: document.createElement('div'),
     extensions: buildExtensions(opts.mode ?? 'note', ctx, { reactViews: false, twitchParent: 'localhost', ...opts.build }),
-    content: opts.content ?? '<p></p>',
+    ...(opts.build?.ydoc ? {} : { content: opts.content ?? '<p></p>' }),
   });
   return { editor, host, ctx };
 }
