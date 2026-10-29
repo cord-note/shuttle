@@ -33,14 +33,14 @@ adapter object, `ShuttleHost`.
 ## Install
 
 ```bash
-npm install shuttle-editor react react-dom katex
+npm install shuttle-editor react react-dom katex yjs
 # or
-pnpm add shuttle-editor react react-dom katex
+pnpm add shuttle-editor react react-dom katex yjs
 # or
-yarn add shuttle-editor react react-dom katex
+yarn add shuttle-editor react react-dom katex yjs
 ```
 
-React 18 or 19 and KaTeX 0.16 are peer dependencies. The package is ESM-only.
+React 18 or 19, KaTeX 0.16 and Yjs 13.6 are peer dependencies. The package is ESM-only.
 
 The same package is also published to GitHub Packages as `@cord-note/shuttle`.
 To install from there, add this to your project's `.npmrc`:
@@ -120,12 +120,49 @@ import { ShuttleEditor, createFakeHost } from 'shuttle-editor';
 const host = createFakeHost();
 ```
 
+## Editing a Y.Doc
+
+Pass a `Y.Doc` as `ydoc` to edit it directly, for sync or collaboration.
+Shuttle binds to its `default` XML fragment through Tiptap's Collaboration
+extension.
+
+```tsx
+import * as Y from 'yjs';
+
+const ydoc = useMemo(() => {
+  const d = new Y.Doc();
+  if (saved) Y.applyUpdate(d, saved);
+  return d;
+}, [noteId]);
+
+useEffect(() => {
+  const onUpdate = (update: Uint8Array, origin: unknown) => {
+    if (origin !== 'remote') persist(noteId, update);
+  };
+  ydoc.on('update', onUpdate);
+  return () => ydoc.off('update', onUpdate);
+}, [ydoc]);
+
+<ShuttleEditor docKey={noteId} doc={null} ydoc={ydoc} /* … */ />
+```
+
+- Pass a new `Y.Doc` with each new `docKey`; the editor is rebuilt for it.
+- Undo is Yjs undo: it takes back this editor's own edits, never ones that
+  arrived from elsewhere.
+- Apply updates from elsewhere with `Y.applyUpdate(ydoc, update, 'remote')`;
+  the editor shows them.
+- Block ids are only minted for local edits, so give every block its
+  `blockId` before a document first goes into a `Y.Doc`.
+- `onChange` still reports the document as JSON.
+- `yjs` is a peer dependency: install it in your app, so there is one copy.
+
 ## Props
 
 | Prop | Type | Behaviour |
 |---|---|---|
 | `docKey` | `string` | Identity of the document. `doc` is read only when this changes; after that the editor owns the content. Changing it saves any pending edit to the previous document first. |
 | `doc` | `JSONContent \| null` | The stored document, or `null` for an empty one. A document that doesn't fit the schema opens read-only (see [Document format](#document-format)). |
+| `ydoc` | `Y.Doc` | Optional. Edit this Yjs document instead of `doc` (see [Editing a Y.Doc](#editing-a-ydoc)). Pass a new one with each new `docKey`. |
 | `mode` | `'note' \| 'notepad'` | `note` is a plain document. `notepad` adds the block gutter (drag handles, block menu), block shortcuts and block references. Both use the same schema, so a document can switch modes. |
 | `host` | `ShuttleHost` | Your app's adapter. Pass a **new object** when your note list changes; Shuttle refreshes views derived from it (unlinked mentions) when the identity changes. |
 | `onChange` | `(docKey, doc) => void` | Save callback, debounced. Also called immediately when `docKey` changes and on unmount, so an edit inside the debounce window is never lost. |

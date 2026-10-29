@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- New `ydoc` prop: edit a `Y.Doc` the host owns, through Tiptap's Collaboration
+  extension. Undo is Yjs undo (this editor's own edits only), and ids are minted
+  only for local edits, never for content that arrived from elsewhere.
+- `yjs` (^13.6) is now a peer dependency.
+- Documents that don't match the schema open empty and read-only instead of as
+  a text preview; the pre-0.1 `notepadBlock` preview is gone.
+
 ## 0.3.0
 
 - A margin ruler: new `lineWidth`, `onLineWidthChange` and `lineWidthRange` props.
