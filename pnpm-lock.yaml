@@ -17,6 +17,9 @@ importers:
       '@tiptap/extension-code-block-lowlight':
         specifier: ^3.31.3
         version: 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/extension-code-block@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)(highlight.js@11.11.2)(lowlight@3.3.0)
+      '@tiptap/extension-collaboration':
+        specifier: ^3.31.3
+        version: 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)(@tiptap/y-tiptap@3.0.9(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.5)(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33))(yjs@13.6.33)
       '@tiptap/extension-details':
         specifier: ^3.31.3
         version: 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/extension-text-style@3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3)))(@tiptap/pm@3.31.3)
@@ -89,6 +92,9 @@ importers:
       '@tiptap/suggestion':
         specifier: ^3.31.3
         version: 3.31.3(@floating-ui/dom@1.8.0)(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)
+      '@tiptap/y-tiptap':
+        specifier: ^3.0.9
+        version: 3.0.9(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.5)(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       lowlight:
         specifier: ^3.1.0
         version: 3.3.0
@@ -135,6 +141,9 @@ importers:
       vite:
         specifier: ^5.2.0
         version: 5.4.21(@types/node@26.6.2)
+      yjs:
+        specifier: 13.6.33
+        version: 13.6.33
 
 packages:
 
