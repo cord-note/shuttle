@@ -5,6 +5,7 @@ import type { Editor, JSONContent } from '@tiptap/core';
 import { ShuttleEditor, type ShuttleControls, type ShuttleEditorProps } from '../src/ShuttleEditor';
 import { createFakeHost } from '../src/testing/fakeHost';
 import { sleep } from './helpers';
+import * as Y from 'yjs';
 
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
@@ -192,6 +193,41 @@ describe('ShuttleEditor', () => {
     expect(typeof heading?.attrs?.['blockId']).toBe('string');
     expect(heading?.attrs).not.toHaveProperty('id');
     expect(heading?.attrs).not.toHaveProperty('data-toc-id');
+  });
+
+  it('edits a Y.Doc when one is given, and still reports JSON', async () => {
+    const ydoc = new Y.Doc();
+    const h = mount({ docKey: 'y1', doc: null, ydoc });
+    await act(async () => { await sleep(10); });
+    act(() => { h.editor().commands.insertContent('typed'); });
+    expect(ydoc.getXmlFragment('default').toString()).toContain('typed');
+    await act(async () => { await sleep(30); });
+    expect(JSON.stringify(h.saves.at(-1)?.doc)).toContain('typed');
+  });
+
+  it('switches to another Y.Doc with the document', async () => {
+    const first = new Y.Doc();
+    const h = mount({ docKey: 'y1', doc: null, ydoc: first });
+    await act(async () => { await sleep(10); });
+    act(() => { h.editor().commands.insertContent('first'); });
+
+    const second = new Y.Doc();
+    const seed = new Y.XmlElement('paragraph');
+    seed.insert(0, [new Y.XmlText('second')]);
+    second.getXmlFragment('default').insert(0, [seed]);
+    h.render({ docKey: 'y2', ydoc: second });
+    await act(async () => { await sleep(10); });
+
+    expect(h.editor().getText()).toBe('second');
+    expect(first.getXmlFragment('default').toString()).toContain('first');
+    expect(h.saves.map((s) => s.key)).toContain('y1');
+  });
+
+  it('ignores the doc prop when a Y.Doc is given', async () => {
+    const h = mount({ docKey: 'y1', doc: doc('not me'), ydoc: new Y.Doc() });
+    await act(async () => { await sleep(10); });
+    expect(h.editor().getText()).not.toContain('not me');
+    expect(h.editor().isEditable).toBe(true);
   });
 
   it('persists block ids minted on load', async () => {

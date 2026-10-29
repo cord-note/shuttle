@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor, JSONContent } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
+import type { Doc as YDoc } from 'yjs';
 import type { TableOfContentData } from '@tiptap/extension-table-of-contents';
 import { buildExtensions } from './extensions';
 import type { MathEditRequest, ShuttleContextRef, ShuttleUiEvents } from './context';
@@ -55,6 +56,13 @@ export interface ShuttleEditorProps {
   docKey: string;
   /** Stored document. Read only when `docKey` changes; the editor owns it after. */
   doc: JSONContent | null;
+  /**
+   * Edit this Y.Doc instead of `doc`. Pass a new one together with a new
+   * `docKey`; the editor is rebuilt for it. `doc` is then ignored, undo is Yjs
+   * undo (this editor's own edits only), and `onChange` still reports JSON.
+   * Listen to the Y.Doc's `update` events to persist or sync.
+   */
+  ydoc?: YDoc;
   mode: ShuttleMode;
   /**
    * The embedding application. Pass a new host object when the note list
@@ -127,7 +135,7 @@ const toSaved = (editor: Editor): JSONContent => toStoredJson(stripPendingUpload
 
 export function ShuttleEditor(props: ShuttleEditorProps) {
   const {
-    docKey, doc, mode, host, toolbar = true, outline = false, placeholder, twitch = true, colorScheme = 'auto', className, children,
+    docKey, doc, ydoc, mode, host, toolbar = true, outline = false, placeholder, twitch = true, colorScheme = 'auto', className, children,
   } = props;
   const twitchParent = props.twitchParent
     ?? (typeof window !== 'undefined' ? window.location.hostname || 'localhost' : 'localhost');
@@ -224,13 +232,15 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
     twitchParent,
     twitch,
     ...(placeholder ? { placeholder } : {}),
+    ...(ydoc ? { ydoc } : {}),
     onOutline: (items) => setToc(items),
-  }), [mode, twitchParent, twitch, placeholder]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [mode, twitchParent, twitch, placeholder, ydoc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editor = useEditor({
     immediatelyRender: true,
     extensions,
-    content: EMPTY_DOC,
+    // Collaboration owns the content of a Y.Doc.
+    ...(ydoc ? {} : { content: EMPTY_DOC }),
     onUpdate: ({ editor: ed }) => {
       const key = loadedKey.current;
       if (ed !== loadedEditor.current || key === null || legacyRef.current) return;
@@ -255,7 +265,7 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
 
       reportStats(ed);
     },
-  }, [mode, twitchParent, twitch, placeholder]);
+  }, [mode, twitchParent, twitch, placeholder, ydoc]);
 
   // Load the document for this key, after writing the previous key's edit.
   // The same key again means the editor was rebuilt (mode change, StrictMode),
@@ -263,6 +273,22 @@ export function ShuttleEditor(props: ShuttleEditorProps) {
   useEffect(() => {
     if (!editor || editor.isDestroyed) return;
     flush();
+    if (ydoc) {
+      // Collaboration owns the content; the Y.Doc is always the latest version.
+      legacyRef.current = false;
+      setLegacy(false);
+      editor.setEditable(true, false);
+      loadedEditor.current = editor;
+      loadedKey.current = docKey;
+      lastDoc.current = toSaved(editor);
+      mentions.current = collectMentionTargets(editor.state.doc);
+      fragments.current = collectFragmentLinkIds(editor.state.doc);
+      reportStats(editor);
+      setPicker(null);
+      setMath(null);
+      setFind(false);
+      return;
+    }
     const rebuilt = docKey === loadedKey.current;
     if (rebuilt && !legacyRef.current) {
       loadDocument(editor, lastDoc.current ?? doc ?? EMPTY_DOC);
