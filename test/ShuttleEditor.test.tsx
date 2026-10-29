@@ -70,32 +70,10 @@ describe('ShuttleEditor', () => {
     const legacy: JSONContent = { type: 'doc', content: [{ type: 'notepadBlock', content: [{ type: 'paragraph' }] }] };
     const h = mount({ docKey: 'old', doc: legacy });
     expect(h.editor().isEditable).toBe(false);
-    expect(container!.textContent).toContain('older format');
+    expect(container!.textContent).toContain("doesn't match the editor's format");
     expect(h.host.calls.logs.some((l) => l.level === 'warn')).toBe(true);
     act(() => { h.editor().commands.insertContent('x'); });
     await act(async () => { await sleep(30); });
-    expect(h.saves).toEqual([]);
-  });
-
-  it('shows a legacy document\'s text read-only and never saves it', async () => {
-    const legacy: JSONContent = {
-      type: 'doc',
-      content: [
-        { type: 'notepadBlock', attrs: { blockId: 'b1' }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'First block' }] }] },
-        { type: 'notepadBlock', attrs: { blockId: 'b2' }, content: [{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Second block' }] }] },
-      ],
-    };
-    const h = mount({ docKey: 'old', doc: legacy });
-    expect(h.editor().isEditable).toBe(false);
-    expect(h.editor().getJSON().content?.map((n) => n.type)).toEqual(['paragraph', 'paragraph']);
-    expect(h.editor().getText()).toContain('First block');
-    expect(h.editor().getText()).toContain('Second block');
-    expect(container!.textContent).toContain('First block');
-    act(() => { h.editor().commands.insertContent('x'); });
-    await act(async () => { await sleep(30); });
-    h.render({ docKey: 'b', doc: doc('bee') });
-    act(() => root!.unmount());
-    root = null;
     expect(h.saves).toEqual([]);
   });
 
@@ -106,7 +84,7 @@ describe('ShuttleEditor', () => {
     h.render({ docKey: 'b', doc: doc('bee') });
     expect(h.saves).toEqual([]);
     expect(h.editor().isEditable).toBe(true);
-    expect(container!.textContent).not.toContain('older format');
+    expect(container!.textContent).not.toContain("doesn't match the editor's format");
   });
 
   it('reports added and removed wiki links with the document key', () => {
@@ -293,7 +271,7 @@ describe('ShuttleEditor', () => {
 
     h.render({ docKey: 'old2', doc: legacy });
     expect(h.editor().isEditable).toBe(false);
-    expect(container!.textContent).toContain('older format');
+    expect(container!.textContent).toContain("doesn't match the editor's format");
     act(() => { h.editor().commands.insertContent('x'); });
     await act(async () => { await sleep(30); });
     expect(h.saves.map((s) => s.key)).toEqual(['b']);

@@ -246,9 +246,9 @@ store.
   `refBlockId`), never a copy of its content.
 - What is **not** saved: the temporary ids the outline puts on headings, and images
   that are still uploading (they are saved once `uploadFile` resolves).
-- A document that doesn't match the current schema opens **read-only**, showing its
-  text with a notice, and is never passed to `onChange` — so an old or corrupt
-  document is never overwritten. `isValidDoc(schema, json)` runs the same check.
+- A document that doesn't match the current schema opens **read-only** and empty,
+  with a notice, and is never passed to `onChange` — so a corrupt document is
+  never overwritten. `isValidDoc(schema, json)` runs the same check.
 - `EMPTY_DOC` is an empty document; `toStoredJson(json)` is the cleanup applied before
   saving, if you build documents yourself.
 
