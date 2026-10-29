@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { nanoid } from 'nanoid';
+import { isChangeOrigin } from '@tiptap/extension-collaboration';
 import { BLOCK_TYPES } from '../extensions/blockTypes';
 
 interface Occurrence {
@@ -49,6 +50,8 @@ function chooseKeeper(occurrences: Occurrence[], old: PMNode | undefined): Occur
  * node and gives the empty one a new id. That only matters for legacy
  * documents loaded with missing ids; ids already present and unique on load
  * are otherwise kept exactly.
+ *
+ * Changes that came from Yjs are left alone (see the line in appendTransaction).
  */
 export const BlockIdGuard = Extension.create({
   name: 'blockIdGuard',
@@ -74,7 +77,9 @@ export const BlockIdGuard = Extension.create({
       new Plugin({
         key: new PluginKey('blockIdGuard'),
         appendTransaction: (transactions, oldState, newState) => {
-          if (!transactions.some((tr) => tr.docChanged)) return null;
+          // Duplicates that arrive from elsewhere are fixed by the next local edit
+          // there, so every device does not re-mint them differently at once.
+          if (!transactions.some((tr) => tr.docChanged && !isChangeOrigin(tr))) return null;
           const current = collect(newState.doc);
           const duplicated = [...current].filter(([, list]) => list.length > 1);
           if (duplicated.length === 0) return null;

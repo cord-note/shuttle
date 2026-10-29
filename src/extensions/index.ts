@@ -8,6 +8,7 @@ import { Youtube } from '@tiptap/extension-youtube';
 import { Twitch } from '@tiptap/extension-twitch';
 import { FileHandler } from '@tiptap/extension-file-handler';
 import { UniqueID } from '@tiptap/extension-unique-id';
+import { Collaboration, isChangeOrigin } from '@tiptap/extension-collaboration';
 import { TableKit } from '@tiptap/extension-table';
 import { DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import { Highlight } from '@tiptap/extension-highlight';
@@ -19,6 +20,7 @@ import { Markdown } from '@tiptap/markdown';
 import { Marked, type marked } from 'marked';
 import { common, createLowlight } from 'lowlight';
 import { nanoid } from 'nanoid';
+import type { Doc as YDoc } from 'yjs';
 
 import type { ShuttleContextRef } from '../context';
 import type { ShuttleMode } from '../host';
@@ -52,6 +54,11 @@ export interface BuildOptions {
    */
   twitch?: boolean;
   placeholder?: string;
+  /**
+   * Edit this Y.Doc (its `default` XML fragment) instead of a JSON document.
+   * Undo becomes Yjs undo, which only takes back this editor's own edits.
+   */
+  ydoc?: YDoc;
   /** Receives heading outline updates for the Outline panel. */
   onOutline?: (items: TableOfContentData) => void;
 }
@@ -69,6 +76,8 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     StarterKit.configure({
       codeBlock: false,
       link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
+      // Collaboration brings its own (Yjs) undo; the two must not both run.
+      ...(options.ydoc ? { undoRedo: false as const } : {}),
     }),
     CodeBlockLowlight.configure({ lowlight }),
     TaskList,
@@ -102,6 +111,8 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
       attributeName: 'blockId',
       types: [...BLOCK_TYPES],
       generateID: () => nanoid(10),
+      // Only the device that edits mints ids; content from elsewhere arrives with them.
+      filterTransaction: (tr) => !isChangeOrigin(tr),
     }),
     Placeholder.configure({ placeholder: options.placeholder ?? 'Start writing… or type / for commands' }),
     CharacterCount,
@@ -128,5 +139,6 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     unlinkedMentions(ctx),
     keybindings(ctx, mode),
     slashCommand(ctx, mode),
+    ...(options.ydoc ? [Collaboration.configure({ document: options.ydoc, field: 'default' })] : []),
   ];
 }
