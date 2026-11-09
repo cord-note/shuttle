@@ -18,6 +18,8 @@ bold), and the document is stored as Tiptap JSON. It includes:
   menu (move, duplicate, turn into, delete).
 - **Block transclusion** — embed a block from another note by reference; it always shows
   the source's current content.
+- **Tag views** — a block your app draws itself, such as a live table of tagged notes,
+  inserted from the slash menu when your host supports it.
 - **Math** — inline and display formulas rendered with KaTeX.
 - **Tables, toggles, task lists, highlight, subscript/superscript, code blocks** with
   syntax highlighting.
@@ -212,6 +214,13 @@ stores or APIs directly.
 | `openNote(noteId, blockId?)` | Navigate to a note, optionally to one of its blocks (clicking a wiki link or a transclusion). |
 | `log(level, message, data?)` | Structured logging. Shuttle never calls `console` itself. |
 
+**Embedded views (optional)**
+
+| Method | Purpose |
+|---|---|
+| `createTagView()` | Async. Ask the user what to show and create a view; resolve with its id, or `null` if they cancelled. Without it, the *Tag view* slash item is hidden. |
+| `renderTagView(container, viewId, controls)` | Draw view `viewId` into `container` and return a function that removes it. `controls.remove()` deletes the block. Without it, tag view blocks show a placeholder. |
+
 **Settings**
 
 | Property | Purpose |
@@ -244,6 +253,7 @@ store.
   `[data-blockid="…"]`. `BLOCK_TYPES` lists the node types that get one.
 - A transclusion stores only the ids of the block it shows (`refNoteId`,
   `refBlockId`), never a copy of its content.
+- A tag view (`tagView`) stores only `viewId`; what it shows lives in your app.
 - What is **not** saved: the temporary ids the outline puts on headings, and images
   that are still uploading (they are saved once `uploadFile` resolves).
 - A document that doesn't match the current schema opens **read-only** and empty,
