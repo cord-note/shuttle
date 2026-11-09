@@ -9,7 +9,7 @@ export {
 } from './ShuttleEditor';
 export type { LineWidthRange } from './ui/Ruler';
 export type {
-  ShuttleHost, ShuttleMode, NoteRef, BlockSummary, ResolvedBlock, FragmentActionType, LogLevel,
+  ShuttleHost, ShuttleMode, NoteRef, BlockSummary, ResolvedBlock, FragmentActionType, LogLevel, TagViewControls,
 } from './host';
 export type { ShuttleContext, ShuttleContextRef, ShuttleUiEvents, MathEditRequest } from './context';
 export { buildExtensions, type BuildOptions } from './extensions';
