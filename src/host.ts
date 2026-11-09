@@ -30,6 +30,12 @@ export interface ResolvedBlock {
 export type FragmentActionType = 'tag' | 'noteLink' | 'fragmentLink';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+/** What a host-drawn tag view may do to its own block. */
+export interface TagViewControls {
+  /** Delete the tag view block from the document. */
+  remove(): void;
+}
+
 /**
  * Everything Shuttle needs from the application embedding it.
  *
@@ -89,6 +95,19 @@ export interface ShuttleHost {
   openNote(noteId: string, blockId?: string): void;
   /** Structured logging; Shuttle never calls `console` directly. */
   log(level: LogLevel, message: string, data?: unknown): void;
+
+  // ── Embedded views (optional) ─────────────────────────────────────────────
+  /**
+   * Ask the user which tag to show and create a view for it. Resolves to the
+   * new view's id, or null if they cancelled. Without it, the "Tag view" slash
+   * item is hidden.
+   */
+  createTagView?(): Promise<string | null>;
+  /**
+   * Draw view `viewId` into `container`; return a function that removes it.
+   * Without it, tag view blocks show a placeholder.
+   */
+  renderTagView?(container: HTMLElement, viewId: string, controls: TagViewControls): () => void;
 
   // ── Settings ──────────────────────────────────────────────────────────────
   /** User overrides of Shuttle's default editor keybindings. */

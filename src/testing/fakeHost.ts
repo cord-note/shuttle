@@ -16,6 +16,8 @@ export interface FakeHostOptions {
   blocks?: BlockSummary[];
   resolved?: ResolvedBlock[];
   uploadFails?: boolean;
+  /** Offer tag views: creates `view-1` and draws its id as text. */
+  tagViews?: boolean;
 }
 
 export type FakeHost = ShuttleHost & { calls: FakeHostCalls };
@@ -88,5 +90,14 @@ export function createFakeHost(options: FakeHostOptions = {}): FakeHost {
     log(level, message, data) {
       calls.logs.push(data === undefined ? { level, message } : { level, message, data });
     },
+    ...(options.tagViews
+      ? {
+          async createTagView() { return 'view-1'; },
+          renderTagView(container: HTMLElement, viewId: string) {
+            container.textContent = `tag view ${viewId}`;
+            return () => { container.textContent = ''; };
+          },
+        }
+      : {}),
   };
 }

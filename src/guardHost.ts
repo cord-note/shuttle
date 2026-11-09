@@ -1,4 +1,4 @@
-import type { LogLevel, NoteRef, ShuttleHost } from './host';
+import type { LogLevel, NoteRef, ShuttleHost, TagViewControls } from './host';
 
 /**
  * The fallback for a failing `listNoteTitles`. One frozen instance, so the
@@ -51,6 +51,8 @@ export function guardHost(host: ShuttleHost): ShuttleHost {
   }
 
   const noop = (): void => {};
+  const createTagView = host.createTagView?.bind(host);
+  const renderTagView = host.renderTagView?.bind(host);
 
   return {
     searchNotes: async((query: string) => host.searchNotes(query)),
@@ -68,5 +70,15 @@ export function guardHost(host: ShuttleHost): ShuttleHost {
     openNote: sync('openNote', (noteId: string, blockId?: string) => host.openNote(noteId, blockId), noop),
     log,
     get keybindings() { return host.keybindings; },
+    ...(createTagView ? { createTagView: async(() => createTagView()) } : {}),
+    ...(renderTagView
+      ? {
+          renderTagView: sync(
+            'renderTagView',
+            (el: HTMLElement, viewId: string, controls: TagViewControls) => renderTagView(el, viewId, controls),
+            () => noop,
+          ),
+        }
+      : {}),
   };
 }
