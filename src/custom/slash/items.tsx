@@ -5,11 +5,11 @@ import type {} from '@tiptap/extension-table';
 import type { ReactNode } from 'react';
 import {
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, CheckSquare, Code2, Quote, Minus,
-  Sigma, Pi, Table, ChevronRight, ImageIcon, Blocks, Tag, Link2,
+  Sigma, Pi, Table, Table2, ChevronRight, ImageIcon, Blocks, Tag, Link2,
   BookOpen, Calendar, CalendarCheck, Layers, BookMarked,
 } from 'lucide-react';
 import type { ShuttleContextRef } from '../../context';
-import type { ShuttleMode } from '../../host';
+import type { ShuttleHost, ShuttleMode } from '../../host';
 import { blockIdAt } from '../../doc/topLevel';
 
 export interface SlashArgs {
@@ -24,6 +24,8 @@ export interface SlashItem {
   icon: ReactNode;
   group: 'Blocks' | 'Insert' | 'Annotate' | 'Templates';
   only?: ShuttleMode;
+  /** Shown only when the host implements this optional callback. */
+  needs?: 'createTagView';
   run: (args: SlashArgs) => void;
 }
 
@@ -87,6 +89,17 @@ export const SLASH_ITEMS: readonly SlashItem[] = [
     title: 'Block reference', description: 'Embed a block from another note', group: 'Insert', icon: icon(Blocks), only: 'notepad',
     run: (a) => { clear(a).run(); a.ctx.current.events.openRefPicker(); },
   },
+  {
+    title: 'Tag view', description: 'A live table or board of a tag', group: 'Insert', icon: icon(Table2), needs: 'createTagView',
+    run: (a) => {
+      clear(a).run();
+      const create = a.ctx.current.host.createTagView;
+      if (!create) return;
+      create()
+        .then((viewId) => { if (viewId) a.editor.chain().focus().insertTagView(viewId).run(); })
+        .catch((error: unknown) => a.ctx.current.host.log('warn', 'Creating a tag view failed', { error: String(error) }));
+    },
+  },
   { title: 'Tag block', description: 'Add a tag to this block', group: 'Annotate', icon: icon(Tag), run: fragmentAction('tag') },
   { title: 'Link → note', description: 'Link this block to a note', group: 'Annotate', icon: icon(Link2), run: fragmentAction('noteLink') },
   { title: 'Link → fragment', description: 'Link this block to a block in a note', group: 'Annotate', icon: icon(Link2), run: fragmentAction('fragmentLink') },
@@ -102,11 +115,12 @@ export const SLASH_ITEMS: readonly SlashItem[] = [
     run: insert([h(1, 'Research: Topic'), meta('Source: '), h(2, 'Key Findings'), bullets(3), h(2, 'Notes'), p(), h(2, 'References'), bullets(1)]) },
 ];
 
-export function filterSlashItems(query: string, mode: ShuttleMode): SlashItem[] {
+export function filterSlashItems(query: string, mode: ShuttleMode, host?: ShuttleHost): SlashItem[] {
   const q = query.toLowerCase();
   return SLASH_ITEMS.filter(
     (item) =>
       (item.only === undefined || item.only === mode) &&
+      (item.needs === undefined || (host !== undefined && host[item.needs] !== undefined)) &&
       (item.title.toLowerCase().includes(q) || item.description.toLowerCase().includes(q)),
   );
 }

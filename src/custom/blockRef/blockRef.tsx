@@ -1,9 +1,8 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
-import { TextSelection } from '@tiptap/pm/state';
 import type { ShuttleContextRef } from '../../context';
 import type { ViewOptions } from '../links/wikiLink';
-import { topLevelAt } from '../../doc/topLevel';
+import { insertTopLevelAtom } from '../../doc/insertAtom';
 import BlockRefView from './BlockRefView';
 
 /** What a transclusion stores: the ids of the block it shows, never its content. */
@@ -101,34 +100,9 @@ export function blockRef(ctx: ShuttleContextRef, view: ViewOptions) {
         insertBlockRef:
           (refBlockId, refNoteId) =>
           ({ state, tr, dispatch }) => {
-            const top = topLevelAt(state.doc, state.selection.from);
-            if (!top) return false;
             const refType = state.schema.nodes['blockRef'];
             if (!refType) return false;
-
-            if (dispatch) {
-              const refNode = refType.create({ refBlockId, refNoteId });
-              const isEmptyParagraph = top.node.type.name === 'paragraph' && top.node.content.size === 0;
-
-              let insertPos = top.from;
-              if (isEmptyParagraph) {
-                tr.replaceWith(insertPos, insertPos + top.node.nodeSize, refNode);
-              } else {
-                insertPos = top.from + top.node.nodeSize;
-                tr.insert(insertPos, refNode);
-              }
-
-              const afterRefPos = insertPos + refNode.nodeSize;
-              const nextNode = tr.doc.resolve(afterRefPos).nodeAfter;
-              if (!nextNode || (nextNode.type.name !== 'paragraph' && nextNode.type.name !== 'heading')) {
-                const paragraphType = state.schema.nodes['paragraph'];
-                if (paragraphType) tr.insert(afterRefPos, paragraphType.create());
-              }
-
-              tr.setSelection(TextSelection.create(tr.doc, afterRefPos + 1));
-              dispatch(tr.scrollIntoView());
-            }
-            return true;
+            return insertTopLevelAtom(state, tr, dispatch, refType.create({ refBlockId, refNoteId }));
           },
       };
     },
