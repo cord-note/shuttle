@@ -8,13 +8,17 @@ export default function TagViewView({ node, extension, deleteNode }: NodeViewPro
   const viewId = node.attrs['viewId'] as string | null;
   const box = useRef<HTMLDivElement>(null);
   const canDraw = Boolean(ctx.current.host.renderTagView);
+  // A new function arrives on every update; reading it through a ref keeps
+  // the host's drawing to once per view instead of once per keystroke.
+  const remove = useRef(deleteNode);
+  remove.current = deleteNode;
 
   useEffect(() => {
     const el = box.current;
     const draw = ctx.current.host.renderTagView;
     if (!el || !viewId || !draw) return;
-    return draw(el, viewId, { remove: deleteNode });
-  }, [viewId, ctx, deleteNode]);
+    return draw(el, viewId, { remove: () => remove.current() });
+  }, [viewId, ctx]);
 
   return (
     <NodeViewWrapper className="sh-tagview" contentEditable={false}>
