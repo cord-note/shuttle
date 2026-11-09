@@ -29,6 +29,7 @@ import { BlockCommands } from '../custom/notepad/commands';
 import { wikiLink } from '../custom/links/wikiLink';
 import { fragmentLink } from '../custom/links/fragmentLink';
 import { blockRef } from '../custom/blockRef/blockRef';
+import { tagView } from '../custom/tagView/tagView';
 import { ShuttleDetails } from '../custom/markdown/details';
 import { MarkdownClipboard } from '../custom/markdown/clipboard';
 import { shuttleBlockMath } from '../custom/math/blockMath';
@@ -135,6 +136,7 @@ export function buildExtensions(mode: ShuttleMode, ctx: ShuttleContextRef, optio
     wikiLink(ctx, view),
     fragmentLink(ctx, view),
     blockRef(ctx, view),
+    tagView(ctx, view),
     BlockCommands,
     unlinkedMentions(ctx),
     keybindings(ctx, mode),

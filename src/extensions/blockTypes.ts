@@ -6,6 +6,7 @@
 export const BLOCK_TYPES: readonly string[] = [
   'paragraph', 'heading', 'bulletList', 'orderedList', 'taskList', 'blockquote', 'codeBlock',
   'blockMath', 'horizontalRule', 'image', 'youtube', 'twitch', 'table', 'details', 'blockRef',
+  'tagView',
 ];
 
 /**

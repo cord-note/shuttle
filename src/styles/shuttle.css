@@ -288,6 +288,9 @@
 .sh-blockref-source { display: inline-flex; gap: 4px; align-items: center; font-size: 0.8em; color: var(--sh-muted); background: none; border: 0; cursor: pointer; padding: 0; }
 .sh-blockref-status { display: flex; gap: 6px; align-items: center; color: var(--sh-muted); font-size: 0.85em; }
 .sh-blockref-body { margin-top: 4px; }
+.sh-tagview { display: block; margin: 6px 0; }
+.sh-tagview-body { display: block; }
+.sh-tagview-status { border: 1px dashed var(--sh-border); border-radius: var(--sh-radius); padding: 10px; color: var(--sh-muted); font-size: 0.85em; }
 
 /* ── Chrome ─────────────────────────────────────────────────────────────── */
 .sh-legacy { background: var(--sh-bg-raised); border: 1px solid var(--sh-border); border-radius: var(--sh-radius); padding: 8px 12px; color: var(--sh-muted); margin-bottom: 8px; }
