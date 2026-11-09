@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+- New `tagView` node: a leaf block that stores only a `viewId` and is drawn by the
+  host, for live views such as a table of tagged notes. It gets a `blockId` like
+  other blocks and adds no text of its own.
+- Two optional host callbacks: `createTagView()` (asks the user and returns a view
+  id) and `renderTagView(container, viewId, controls)` (draws the view; `controls`
+  is the new `TagViewControls`, whose `remove()` deletes the block). Hosts without
+  them see no change.
+- A *Tag view* slash item, shown only when the host implements `createTagView`.
+
 ## 0.4.0
 
 - New `ydoc` prop: edit a `Y.Doc` the host owns, through Tiptap's Collaboration
